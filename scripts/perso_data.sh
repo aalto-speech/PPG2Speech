@@ -6,9 +6,6 @@ out_dir=$2
 male="${data_dir}/male"
 female="${data_dir}/female"
 
-male_audio_16k="${data_dir}/downsampled_16k_male"
-female_audio_16k="${data_dir}/downsampled_16k_female"
-
 if [ "$#" -ne 2 ]; then
     echo "Error: Insufficent Arguments. \
         Usage: ./perso_data.sh <data_dir> <out_dir>."
@@ -26,9 +23,14 @@ for speaker in ${male}/*m; do
         echo "....Processing $speaker"
         for utt in ${speaker}/prompts/*.utt; do
             key=$(basename $utt .utt);
-            awk -v key=${key} '{print key " " $0}' ${utt} >> ${out_dir}/text_male;
-            awk -v key=${key} -v audioPath=${male_audio_16k} '{print key " " \
-                audioPath "/" key ".wav"}' ${utt} >> ${out_dir}/wav_male.scp;
+            wav_path=${speaker}/wav/${key}.wav
+
+            if [ -e ${wav_path} ]; then
+                awk -v key=${key} '{print key " " $0}' ${utt} \
+                    >> ${out_dir}/text_male;
+                awk -v key=${key} -v wavpath=${wav_path} '{print key " " wavpath}' \
+                    ${utt} >> ${out_dir}/wav_male.scp;
+            fi
         done
     fi
 done
@@ -46,10 +48,14 @@ for speaker in ${female}/*; do
         echo "....Processing $speaker"
         for utt in ${speaker}/prompts/*.utt; do
             key=$(basename $utt .utt);
-            awk -v key=${key} '{print key " " $0}' ${utt} >> \
-                "${out_dir}/text_female";
-            awk -v key=${key} -v audioPath=${female_audio_16k} '{print key " " \
-                audioPath "/" key ".wav"}' ${utt} >> "${out_dir}/wav_female.scp";
+            wav_path=${speaker}/wav/${key}.wav
+
+            if [ -e ${wav_path} ]; then
+                awk -v key=${key} '{print key " " $0}' ${utt} \
+                    >> ${out_dir}/text_female;
+                awk -v key=${key} -v wavpath=${wav_path} '{print key " " wavpath}' \
+                    ${utt} >> ${out_dir}/wav_female.scp;
+            fi
         done
     fi
 done
