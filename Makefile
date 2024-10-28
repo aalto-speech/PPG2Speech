@@ -10,4 +10,7 @@ tts_train:
 tts_inference:
 	python -m ppg_tts.inference
 
-all: speaker_emb ppg tts_train tts_inference
+data_prep:
+	./scripts/perso_data.sh /teamwork/t40511_asr/c/perso_synteesi ./data
+
+all: data_prep speaker_emb ppg tts_train tts_inference
