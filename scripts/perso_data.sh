@@ -17,7 +17,7 @@ fi
 echo "Processing male dataset in ${male}"
 if [ -e "${out_dir}/text_male" ] || [ -e "${out_dir}/wav_male.scp" ]; then
     echo "Found ${out_dir}/text_male or ${out_dir}/wav_male.scp, removing old data"
-    rm "${out_dir}/text_male" "${out_dir}/wav_male.scp"
+    rm -f "${out_dir}/text_male" "${out_dir}/wav_male.scp"
 fi
 
 for speaker in ${male}/*m; do
@@ -35,7 +35,7 @@ done
 echo "Processing female dataset in ${female}"
 if [ -e "${out_dir}/text_female" ] || [ -e "${out_dir}/wav_female.scp" ]; then
     echo "Found ${out_dir}/text_female or ${out_dir}/wav_female.scp, removing old data"
-    rm "${out_dir}/text_female" "${out_dir}/wav_female.scp"
+    rm -f "${out_dir}/text_female" "${out_dir}/wav_female.scp"
 fi
 
 for speaker in ${female}/*; do
@@ -52,7 +52,7 @@ done
 echo "Merge male and female data"
 if [ -e "${out_dir}/text" ] || [ -e "${out_dir}/wav.scp" ]; then
     echo "Found ${out_dir}/text or ${out_dir}/wav.scp, removing old data"
-    rm "${out_dir}/text" "${out_dir}/wav.scp"
+    rm -f "${out_dir}/text" "${out_dir}/wav.scp"
 fi
 
 cat ${out_dir}/text_male ${out_dir}/text_female > ${out_dir}/text
