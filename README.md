@@ -20,4 +20,4 @@ Install [pytorch-lighting](https://lightning.ai/docs/pytorch/stable/#install-lig
 
 ### 2024.10.27
 Argparser, PPG and Speaker Embedding module done. Needs tests.
-perso_data processing scripts done. Need train-dev-test splits script.
+perso_data processing scripts done.
