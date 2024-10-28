@@ -17,3 +17,6 @@ PPG extract model: https://huggingface.co/GetmanY1/wav2vec2-large-fi-150k-finetu
 Speaker Embedding model: https://huggingface.co/pyannote/embedding
 
 Install [pytorch-lighting](https://lightning.ai/docs/pytorch/stable/#install-lightning) and [pyannote.audio](https://github.com/pyannote/pyannote-audio) for training.
+
+### 2024.10.27
+Argparser, PPG and Speaker Embedding module done. Needs tests.
