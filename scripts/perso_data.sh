@@ -19,8 +19,9 @@ for speaker in ${male}/*m; do
     if [ -d $speaker ]; then
         echo "....Processing $speaker"
         for utt in ${speaker}/prompts/*.utt; do
+            echo "........Processing ${utt}"
             key=$(basename $utt .utt)
-            awk -v key=${key} '{print key " " $0}' >> ${out_dir}/text_male
+            awk -v key=${key} '{print key " " $0}' # >> ${out_dir}/text_male
             awk -v key=${key} -v audioPath=${male_audio_16k} '{print key " " audioPath "/" key ".wav"}' >> ${out_dir}/wav_male.scp
         done
     fi
@@ -32,7 +33,7 @@ for speaker in ${female}/*; do
         echo "....Processing $speaker"
         for utt in ${speaker}/prompts/*.utt; do
             key=$(basename $utt .utt)
-            awk -v key=${key} '{print key " " $0}' >> ${out_dir}/text_female
+            awk -v key=${key} '{print key " " $0}' # >> ${out_dir}/text_female
             awk -v key=${key} -v audioPath=${female_audio_16k} '{print key " " audioPath "/" key ".wav"}' >> ${out_dir}/wav_female.scp
         done
     fi
