@@ -1,4 +1,5 @@
 data/
+hf_token
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

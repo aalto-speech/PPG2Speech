@@ -12,4 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--asr_pretrained", 
                         help="Pretrained ASR model for PPG extraction. Should compatible with Huggingface pretrained models.",
                         default="GetmanY1/wav2vec2-large-fi-150k-finetuned")
+    parser.add_argument("--device",
+                        help="CPU/CUDA device to run",
+                        default="cpu")
     return parser

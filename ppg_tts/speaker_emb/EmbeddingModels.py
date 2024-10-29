@@ -1,12 +1,19 @@
 from pyannote.audio import Model
 from pyannote.audio import Inference
 import torch
+import torch.nn.functional as f
 
 class SpeakerEmbeddingPretrained:
-    def __init__(self, auth_token: str):
-        self.model = Model.from_pretrained("pyannote/embedding", use_auth_token=auth_token)
+    def __init__(self, auth_token: str, device: str):
+        self.model = Model.from_pretrained("pyannote/embedding", use_auth_token=auth_token, strict=False)
+
         self.inference = Inference(self.model, window="whole")
 
-    def forward(self, waveform_in_memory: dict) -> torch.Tensor:
-        return self.inference(waveform_in_memory)
+        self.inference.to(torch.device(device))
+
+    def forward(self, waveform_in_memory: torch.Tensor) -> torch.Tensor:
+        len_pad = 16000 * 5 - waveform_in_memory.size(-1)
+        if len_pad > 0:
+            waveform_in_memory = f.pad(waveform_in_memory, [0, len_pad], mode='constant', value=0.0)
+        return self.inference({"waveform": waveform_in_memory, "sample_rate": 16000})
     
