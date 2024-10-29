@@ -62,8 +62,8 @@ if __name__ == "__main__":
     parent_path = train_val_dir.parent
 
     print("Write the dataset to disk.")
-    write(train_texts, parent_path / "train/texts")
+    write(train_texts, parent_path / "train/text")
     write(train_wavs, parent_path / "train/wav.scp")
 
-    write(val_texts, parent_path / "val/texts")
+    write(val_texts, parent_path / "val/text")
     write(val_wavs, parent_path / "val/wav.scp")

@@ -1,6 +1,6 @@
 import torchaudio
 import pathlib
-from torchaudio.transforms import Resample
+from torchaudio.transforms import Resample, MelSpectrogram
 from typing import Tuple, Dict
 from torch.utils.data import Dataset, DataLoader
 
@@ -18,11 +18,15 @@ class PersoDataset(Dataset):
             self.text_files = {pair.split(" ")[0]: " ".join(pair.split(" ")[1:]).strip("\n") \
                                for pair in text_reader.readlines()}
 
-        self.id2key = {i: key for i, key in enumerate(self.wav_files.keys())}
+        self.id2key = {i: key for i, key in enumerate(self.wav_files)}
 
         self.resampler = Resample(orig_freq=44100, new_freq=16000)
 
-    def __getitem__(self, index) -> Tuple[int, Dict]:
+        self.melspec = MelSpectrogram()
+
+    def __getitem__(self, index) -> Tuple[str, Dict]:
+        if index >= len(self.id2key):
+            raise IndexError
         key = self.id2key[index]
 
         wav = self.wav_files[key]
@@ -32,7 +36,9 @@ class PersoDataset(Dataset):
         
         waveform = self.resampler(waveform)
 
-        return key, {"feature": waveform, "text": text}
+        mel = self.melspec(waveform)
+
+        return key, {"feature": waveform, "text": text, "melspectrogram": mel}
     
     def __len__(self) -> int:
         return len(self.id2key)
