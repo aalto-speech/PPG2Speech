@@ -7,8 +7,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="The data directory for Perso Dataset. Should contains wav.scp and text.",
                         default="./data")
     parser.add_argument("--auth_token",
-                        help="The authorisation token for using Pyannote Embedding model.",
-                        required=True)
+                        help="The authorisation token for using Pyannote Embedding model.")
     parser.add_argument("--asr_pretrained", 
                         help="Pretrained ASR model for PPG extraction. Should compatible with Huggingface pretrained models.",
                         default="GetmanY1/wav2vec2-large-fi-150k-finetuned")
