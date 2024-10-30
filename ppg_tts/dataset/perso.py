@@ -1,5 +1,6 @@
 import torch
 import torchaudio
+from loguru import logger
 from pathlib import Path
 from torchaudio.transforms import Resample, MelSpectrogram
 from typing import Tuple, Dict
@@ -11,6 +12,8 @@ class PersoDatasetBasic(Dataset):
         self.data_dir = data_dir
         self.wav_scp_path = Path(self.data_dir, "wav.scp")
         self.text_path = Path(self.data_dir, "text")
+
+        logger.info(f"Reading dataset from {data_dir}")
 
         with open(self.wav_scp_path, "r") as wav_reader:
             self.wav_files = {pair.split(" ")[0]: pair.split(" ")[1].strip("\n") \
