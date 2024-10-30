@@ -1,1 +1,1 @@
-from .perso import  PersoDataset, PersoDatasetWithConditions
+from .perso import  PersoDatasetBasic, PersoDatasetWithConditions

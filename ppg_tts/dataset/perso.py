@@ -1,14 +1,15 @@
 import torchaudio
-import pathlib
+from pathlib import Path
 from torchaudio.transforms import Resample, MelSpectrogram
 from typing import Tuple, Dict
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
+from kaldiio import ReadHelper
 
-class PersoDataset(Dataset):
+class PersoDatasetBasic(Dataset):
     def __init__(self, data_dir: str):
         self.data_dir = data_dir
-        self.wav_scp_path = pathlib.Path(self.data_dir, "wav.scp")
-        self.text_path = pathlib.Path(self.data_dir, "text")
+        self.wav_scp_path = Path(self.data_dir, "wav.scp")
+        self.text_path = Path(self.data_dir, "text")
 
         with open(self.wav_scp_path, "r") as wav_reader:
             self.wav_files = {pair.split(" ")[0]: pair.split(" ")[1].strip("\n") \
@@ -24,7 +25,7 @@ class PersoDataset(Dataset):
 
         self.melspec = MelSpectrogram()
 
-    def __getitem__(self, index) -> Tuple[str, Dict]:
+    def __getitem__(self, index: int) -> Tuple[str, Dict]:
         if index >= len(self.id2key):
             raise IndexError
         key = self.id2key[index]
@@ -38,13 +39,44 @@ class PersoDataset(Dataset):
 
         mel = self.melspec(waveform)
 
-        return key, {"feature": waveform, "text": text, "melspectrogram": mel}
+        return {"key": key, "feature": waveform, "text": text, "melspectrogram": mel}
     
     def __len__(self) -> int:
         return len(self.id2key)
     
 
-class PersoDatasetWithConditions(PersoDataset):
+class PersoDatasetWithConditions(PersoDatasetBasic):
     def __init__(self, data_dir):
         super().__init__(data_dir)
+        self.ppg_path = Path(data_dir, "ppg.scp")
+        self.spk_emb_path = Path(data_dir, "embedding.scp")
+
+        self.ppg = self.read_scp_ark(self.ppg_path)
+        self.spk_emb = self.read_scp_ark(self.spk_emb_path)
+
+    def __getitem__(self, index: int) -> Tuple:
+        if index >= len(self.id2key):
+            raise IndexError
+        key = self.id2key[index]
+
+        wav = self.wav_files[key]
+        text = self.text_files[key]
+
+        waveform, _ = torchaudio.load(wav)
         
+        waveform = self.resampler(waveform)
+
+        mel = self.melspec(waveform)
+
+        return {"key": key, "feature": waveform, "text": text, "melspectrogram": mel}
+
+    def __len__(self) -> int:
+        return super().__len__()
+    
+    def read_scp_ark(self, scp_path: Path):
+        key2feat = {}
+        with ReadHelper(f"scp:{scp_path}") as reader:
+            for key, array in reader:
+                key2feat[key] = array
+        
+        return key2feat
