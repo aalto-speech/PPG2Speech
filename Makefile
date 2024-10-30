@@ -1,5 +1,7 @@
 all: data_prep speaker_emb ppg tts_train tts_inference
 
+features: speaker_emb ppg log_f0
+
 data_prep:
 	./scripts/perso_data.sh $(perso_dir) $(data_dir)
 
@@ -9,6 +11,9 @@ speaker_emb:
 
 ppg:
 	python -m ppg_tts.feature_extract.ppg_extract --data_dir $(data_dir) --device $(device)
+
+log_f0:
+	python -m ppg_tts.feature_extract.log_f0_extract --data_dir $(data_dir)
 
 tts_train:
 	python -m ppg_tts.train

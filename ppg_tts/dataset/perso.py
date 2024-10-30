@@ -51,9 +51,12 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         super().__init__(data_dir)
         self.ppg_path = Path(data_dir, "ppg.scp")
         self.spk_emb_path = Path(data_dir, "embedding.scp")
+        self.log_F0_path = Path(data_dir, "log_f0.scp")
 
         self.ppgs = self._read_scp_ark(self.ppg_path)
         self.spk_embs = self._read_scp_ark(self.spk_emb_path)
+        self.log_F0 = self._read_scp_ark(self.log_F0_path)
+
 
     def __getitem__(self, index: int) -> Tuple:
         if index >= len(self.id2key):
@@ -69,12 +72,16 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
 
         mel = self.melspec(waveform)
 
+        energy = torch.sum(mel ** 2, dim=-1)
+
         return {"key": key,
                 "feature": waveform,
                 "text": text,
                 "melspectrogram": mel,
                 "ppg": torch.Tensor(self.ppgs[key]),
-                "spk_emb": torch.Tensor(self.spk_embs[key])}
+                "spk_emb": torch.Tensor(self.spk_embs[key]),
+                "log_F0": torch.Tensor(self.log_F0[key]),
+                "energy": energy}
 
     def __len__(self) -> int:
         return super().__len__()

@@ -11,7 +11,7 @@ if __name__ == "__main__":
     dataset = PersoDatasetBasic(args.data_dir)
     ASRModel = PPGFromWav2Vec2Pretrained(args.asr_pretrained)
 
-
+    print(f"Extracting PPG to {args.data_dir}")
 
     with WriteHelper(f"ark,scp:{args.data_dir}/ppg.ark,{args.data_dir}/ppg.scp") as writer:
         for i, utterance in tqdm(enumerate(dataset)):

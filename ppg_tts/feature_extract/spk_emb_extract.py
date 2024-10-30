@@ -11,6 +11,8 @@ if __name__ == "__main__":
     dataset = PersoDatasetBasic(args.data_dir)
     SpEmModel = SpeakerEmbeddingPretrained(args.auth_token, args.device)
 
+    print(f"Extracting Speaker Embedding to {args.data_dir}")
+
     with WriteHelper(f"ark,scp:{args.data_dir}/embedding.ark,{args.data_dir}/embedding.scp") as writer:
         for i, utterance in tqdm(enumerate(dataset)):
             wav = utterance["feature"]
