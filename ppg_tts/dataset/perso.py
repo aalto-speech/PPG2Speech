@@ -84,9 +84,9 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 "feature": waveform,
                 "text": text,
                 "melspectrogram": mel,
-                "ppg": torch.Tensor(self.ppgs[key]),
-                "spk_emb": torch.Tensor(self.spk_embs[key]),
-                "log_F0": torch.Tensor(self.log_F0[key]),
+                "ppg": torch.from_numpy(self.ppgs[key].copy()),
+                "spk_emb": torch.from_numpy(self.spk_embs[key]),
+                "log_F0": torch.from_numpy(self.log_F0[key]),
                 "energy": energy}
 
     def __len__(self) -> int:
@@ -99,8 +99,3 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 key2feat[key] = array
         
         return key2feat
-
-if __name__ == "__main__":
-    ds = PersoDatasetWithConditions("./data/debug")
-    for d in ds:
-        print(d["melspectrogram"].shape)
