@@ -1,8 +1,10 @@
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
+from loguru import logging
 import torch
 
 class PPGFromWav2Vec2Pretrained:
     def __init__(self, pretrained: str="GetmanY1/wav2vec2-large-fi-150k-finetuned", device: str='cpu'):
+        logging.info(f"Loading pretrained model {pretrained}, running on {device}")
         self.pretrained = pretrained
         self.processor = Wav2Vec2Processor.from_pretrained(pretrained)
         self.model = Wav2Vec2ForCTC.from_pretrained(pretrained)
