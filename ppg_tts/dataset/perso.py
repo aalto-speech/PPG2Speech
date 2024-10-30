@@ -1,3 +1,4 @@
+import torch
 import torchaudio
 from pathlib import Path
 from torchaudio.transforms import Resample, MelSpectrogram
@@ -51,8 +52,8 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         self.ppg_path = Path(data_dir, "ppg.scp")
         self.spk_emb_path = Path(data_dir, "embedding.scp")
 
-        self.ppg = self.read_scp_ark(self.ppg_path)
-        self.spk_emb = self.read_scp_ark(self.spk_emb_path)
+        self.ppgs = self._read_scp_ark(self.ppg_path)
+        self.spk_embs = self._read_scp_ark(self.spk_emb_path)
 
     def __getitem__(self, index: int) -> Tuple:
         if index >= len(self.id2key):
@@ -68,12 +69,17 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
 
         mel = self.melspec(waveform)
 
-        return {"key": key, "feature": waveform, "text": text, "melspectrogram": mel}
+        return {"key": key,
+                "feature": waveform,
+                "text": text,
+                "melspectrogram": mel,
+                "ppg": torch.Tensor(self.ppgs[key]),
+                "spk_emb": torch.Tensor(self.spk_embs[key])}
 
     def __len__(self) -> int:
         return super().__len__()
     
-    def read_scp_ark(self, scp_path: Path):
+    def _read_scp_ark(self, scp_path: Path):
         key2feat = {}
         with ReadHelper(f"scp:{scp_path}") as reader:
             for key, array in reader:

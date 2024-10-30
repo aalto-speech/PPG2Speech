@@ -20,3 +20,7 @@ class PPGFromWav2Vec2Pretrained:
             logits = self.model(waveform).logits
 
         return logits
+    
+    def tokenize(self, target: str):
+        encoding = self.processor(text=target)
+        return encoding

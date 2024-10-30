@@ -1,6 +1,6 @@
 from ..utils import build_parser
 from ..dataset import PersoDatasetBasic
-from .EmbeddingModels import SpeakerEmbeddingPretrained
+from ..models import SpeakerEmbeddingPretrained
 from kaldiio import WriteHelper
 from tqdm import tqdm
 
