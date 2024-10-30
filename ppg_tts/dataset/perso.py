@@ -56,7 +56,9 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         self.spk_embs = self._read_scp_ark(self.spk_emb_path)
         self.log_F0 = self._read_scp_ark(self.log_F0_path)
 
-        self.melspec = MelSpectrogram(win_length=1024,
+        self.melspec = MelSpectrogram(sample_rate=22050,
+                                      n_fft=1024,
+                                      win_length=1024,
                                       hop_length=256,
                                       f_min=125,
                                       f_max=7600)
@@ -97,3 +99,8 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 key2feat[key] = array
         
         return key2feat
+
+if __name__ == "__main__":
+    ds = PersoDatasetWithConditions("./data/debug")
+    for d in ds:
+        print(d["melspectrogram"].shape)
