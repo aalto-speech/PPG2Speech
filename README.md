@@ -21,3 +21,10 @@ Install [pytorch-lighting](https://lightning.ai/docs/pytorch/stable/#install-lig
 ### 2024.10.27
 Argparser, PPG and Speaker Embedding module done. Needs tests.
 perso_data processing scripts done.
+
+### 2024.10.30
+Add F0 and energy to features. Perso dataset with conditions finished.
+
+Refactor code.
+
+**Discuss with Lauri on the wav2vec2 ASR subsampling issue. The PPGs don't have the same length as waveform. Maybe need to train a upsampling encoder to reverse this, or learning length regulator to expand PPG length to Mel length.**

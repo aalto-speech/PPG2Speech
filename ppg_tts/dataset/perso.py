@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from kaldiio import ReadHelper
 
 class PersoDatasetBasic(Dataset):
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, target_sr: int=22050):
         self.data_dir = data_dir
         self.wav_scp_path = Path(self.data_dir, "wav.scp")
         self.text_path = Path(self.data_dir, "text")
@@ -25,9 +25,7 @@ class PersoDatasetBasic(Dataset):
 
         self.id2key = {i: key for i, key in enumerate(self.wav_files)}
 
-        self.resampler = Resample(orig_freq=44100, new_freq=16000)
-
-        self.melspec = MelSpectrogram()
+        self.resampler = Resample(orig_freq=44100, new_freq=target_sr)
 
     def __getitem__(self, index: int) -> Tuple[str, Dict]:
         if index >= len(self.id2key):
@@ -38,12 +36,10 @@ class PersoDatasetBasic(Dataset):
         text = self.text_files[key]
 
         waveform, _ = torchaudio.load(wav)
-        
+
         waveform = self.resampler(waveform)
 
-        mel = self.melspec(waveform)
-
-        return {"key": key, "feature": waveform, "text": text, "melspectrogram": mel}
+        return {"key": key, "feature": waveform, "text": text}
     
     def __len__(self) -> int:
         return len(self.id2key)
@@ -59,6 +55,11 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         self.ppgs = self._read_scp_ark(self.ppg_path)
         self.spk_embs = self._read_scp_ark(self.spk_emb_path)
         self.log_F0 = self._read_scp_ark(self.log_F0_path)
+
+        self.melspec = MelSpectrogram(win_length=1024,
+                                      hop_length=256,
+                                      f_min=125,
+                                      f_max=7600)
 
 
     def __getitem__(self, index: int) -> Tuple:

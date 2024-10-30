@@ -17,12 +17,12 @@ if __name__ == "__main__":
     with WriteHelper(f"ark,scp:{args.data_dir}/log_f0.ark,{args.data_dir}/log_f0.scp") as writer:
         for i, utterance in enumerate(dataset):
             wav = utterance["feature"]
-            foundamental_freq, v_flag, v_prob = pyin(y=wav.numpy(),
-                                           fmin=librosa.note_to_hz('C2'),
-                                           fmax=librosa.note_to_hz('C7'),
-                                           sr=16000,
+            foundamental_freq, _, _ = pyin(y=wav.numpy(),
+                                           fmin=125,
+                                           fmax=7600,
+                                           sr=22050,
                                            fill_na=1e-8,
-                                           hop_length=1,
+                                           hop_length=256,
                                            frame_length=1024)
             foundamental_freq = np.log(foundamental_freq.squeeze()[:wav.size(-1)])
             writer(utterance["key"], foundamental_freq)

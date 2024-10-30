@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
 
-    dataset = PersoDatasetBasic(args.data_dir)
+    dataset = PersoDatasetBasic(args.data_dir, 16000)
     ASRModel = PPGFromWav2Vec2Pretrained(args.asr_pretrained)
 
     logger.info(f"Extracting PPG to {args.data_dir}, in total {len(dataset)} utterances.")
