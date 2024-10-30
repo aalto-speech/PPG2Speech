@@ -85,8 +85,8 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 "text": text,
                 "melspectrogram": mel,
                 "ppg": torch.from_numpy(self.ppgs[key].copy()),
-                "spk_emb": torch.from_numpy(self.spk_embs[key]),
-                "log_F0": torch.from_numpy(self.log_F0[key]),
+                "spk_emb": torch.from_numpy(self.spk_embs[key].copy()),
+                "log_F0": torch.from_numpy(self.log_F0[key].copy()),
                 "energy": energy}
 
     def __len__(self) -> int:
