@@ -28,3 +28,7 @@ Add F0 and energy to features. Perso dataset with conditions finished.
 Refactor code.
 
 **Discuss with Lauri on the wav2vec2 ASR subsampling issue. The PPGs don't have the same length as waveform. Maybe need to train a upsampling encoder to reverse this, or learning length regulator to expand PPG length to Mel length.**
+
+## 2024.10.31
+
+Discussed with Lauri, use `torch interpolate` to deal with different sample rate between PPG and Mel-spectromgram.

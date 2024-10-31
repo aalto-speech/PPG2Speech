@@ -2,8 +2,9 @@ import torch
 import torchaudio
 from loguru import logger
 from pathlib import Path
+from torch.nn.utils.rnn import pad_sequence
 from torchaudio.transforms import Resample, MelSpectrogram
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 from torch.utils.data import Dataset
 from kaldiio import ReadHelper
 
@@ -99,3 +100,36 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 key2feat[key] = array
         
         return key2feat
+
+
+def PersoCollateFn(batch_lst: List[Dict]) -> Tuple[torch.Tensor]:
+    def _pad_and_batch(key: str):
+        items = [d[key] for d in batch_lst]
+
+        batch_tensor = pad_sequence(items, batch_first=True)
+
+        max_len = batch_tensor.size(1)
+
+        lengths = torch.tensor([item.size(0) for item in items]).unsqueeze(1)
+        max_len_range = torch.arange(max_len).unsqueeze(0)
+
+        mask = lengths <= max_len_range
+
+        return batch_tensor, mask
+
+    mel_batch, mel_mask = _pad_and_batch("melspectrogram")
+    ppg_batch, ppg_mask = _pad_and_batch("ppg")
+    spk_emb_batch, spk_emb_mask = _pad_and_batch("spk_emb")
+    log_F0_batch, log_F0_mask = _pad_and_batch("log_F0")
+    energy_batch, energy_mask = _pad_and_batch("energy")
+
+    return (mel_batch,
+            mel_mask,
+            ppg_batch,
+            ppg_mask,
+            spk_emb_batch,
+            spk_emb_mask,
+            log_F0_batch,
+            log_F0_mask,
+            energy_batch,
+            energy_mask)
