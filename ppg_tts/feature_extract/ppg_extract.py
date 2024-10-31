@@ -3,7 +3,6 @@ from ..dataset import PersoDatasetBasic
 from ..models import PPGFromWav2Vec2Pretrained
 from loguru import logger
 from kaldiio import WriteHelper
-import torch
 
 if __name__ == "__main__":
     parser = build_parser()
@@ -19,9 +18,7 @@ if __name__ == "__main__":
             wav = utterance["feature"]
             ppg = ASRModel.forward(wav)
 
-            ppg = ppg.squeeze(0)[:, 4:]
-
-            ppg = ppg / torch.sum(ppg, dim=-1, keepdim=True)
+            ppg = ppg.squeeze(0)
             writer(utterance["key"], ppg.numpy())
             logger.info(f"{utterance['key']}: wav length {wav.size(-1)}, ppg shape {ppg.shape}")
     
