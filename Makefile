@@ -1,4 +1,4 @@
-all: data_prep speaker_emb ppg tts_train tts_inference
+all: data_prep speaker_emb ppg log_f0 stats tts_train tts_inference
 
 features: speaker_emb ppg log_f0
 
@@ -14,6 +14,9 @@ ppg:
 
 log_f0:
 	python -m ppg_tts.feature_extract.log_f0_extract --data_dir $(data_dir)
+
+stats:
+	python -m ppg_tts.feature_extract.make_stats --data_dir $(data_dir)
 
 tts_train:
 	python -m ppg_tts.train

@@ -1,4 +1,3 @@
-import librosa
 import numpy as np
 from loguru import logger
 from ..utils import build_parser

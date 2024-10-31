@@ -28,7 +28,7 @@ class PersoDatasetBasic(Dataset):
 
         self.resampler = Resample(orig_freq=44100, new_freq=target_sr)
 
-    def __getitem__(self, index: int) -> Tuple[str, Dict]:
+    def __getitem__(self, index: int) -> Dict:
         if index >= len(self.id2key):
             raise IndexError
         key = self.id2key[index]
@@ -65,7 +65,7 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                                       f_max=7600)
 
 
-    def __getitem__(self, index: int) -> Tuple:
+    def __getitem__(self, index: int) -> Dict:
         if index >= len(self.id2key):
             raise IndexError
         key = self.id2key[index]
