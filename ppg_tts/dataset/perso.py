@@ -62,7 +62,8 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                                       win_length=1024,
                                       hop_length=256,
                                       f_min=125,
-                                      f_max=7600)
+                                      f_max=7600,
+                                      n_mels=80)
 
 
     def __getitem__(self, index: int) -> Dict:
@@ -79,12 +80,12 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
 
         mel = self.melspec(waveform)
 
-        energy = torch.sum(mel ** 2, dim=-1)
+        energy = torch.sqrt(torch.sum(mel ** 2, dim=-1))
 
         return {"key": key,
                 "feature": waveform,
                 "text": text,
-                "melspectrogram": mel,
+                "melspectrogram": mel.squeeze(),
                 "ppg": torch.from_numpy(self.ppgs[key].copy()),
                 "spk_emb": torch.from_numpy(self.spk_embs[key].copy()),
                 "log_F0": torch.from_numpy(self.log_F0[key].copy()),
