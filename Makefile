@@ -1,6 +1,6 @@
 all: data_prep speaker_emb ppg log_f0 stats tts_train tts_inference
 
-features: speaker_emb ppg log_f0
+features: speaker_emb ppg log_f0 stats
 
 data_prep:
 	./scripts/perso_data.sh $(perso_dir) $(data_dir)

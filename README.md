@@ -33,4 +33,8 @@ Refactor code.
 
 Discussed with Lauri, use `torch interpolate` to deal with different sample rate between PPG and Mel-spectromgram.
 
-Finished some modules in the system. Need to calculate F0_min, F0_max, energy_min, enery_max from the dataset.
+Finished some modules in the system.Calculate F0_min, F0_max, energy_min, enery_max from the dataset.
+
+Variation adapter need testing.
+
+Ready to build Conformer TTS model.
