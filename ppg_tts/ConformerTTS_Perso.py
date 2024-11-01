@@ -103,9 +103,9 @@ class ConformerTTSModel(L.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        mel_batch, mel_mask, ppg_batch, ppg_mask, ppg_length,\
-        spk_emb_batch, spk_emb_mask, log_F0_batch, log_F0_mask,\
-        log_F0_length, energy_batch, energy_mask, energy_length = batch
+        mel_batch, mel_mask, ppg_batch, _, ppg_length,\
+        spk_emb_batch, _, log_F0_batch, _,\
+        _, energy_batch, _, energy_length = batch
 
         pred_mel, pred_pitch, pred_energy = self.model.forward(
             ppg_batch,
@@ -132,9 +132,9 @@ class ConformerTTSModel(L.LightningModule):
         return total
 
     def validation_step(self, batch, batch_idx):
-        mel_batch, mel_mask, ppg_batch, ppg_mask, ppg_length,\
-        spk_emb_batch, spk_emb_mask, log_F0_batch, log_F0_mask,\
-        log_F0_length, energy_batch, energy_mask, energy_length = batch
+        mel_batch, mel_mask, ppg_batch, _, ppg_length,\
+        spk_emb_batch, _, log_F0_batch, _,\
+        _, energy_batch, _, energy_length = batch
 
         pred_mel, pred_pitch, pred_energy = self.model.forward(
             ppg_batch,
@@ -161,9 +161,9 @@ class ConformerTTSModel(L.LightningModule):
         return total
 
     def test_step(self, batch, batch_idx):
-        mel_batch, mel_mask, ppg_batch, ppg_mask, ppg_length,\
-        spk_emb_batch, spk_emb_mask, log_F0_batch, log_F0_mask,\
-        log_F0_length, energy_batch, energy_mask, energy_length = batch
+        mel_batch, mel_mask, ppg_batch, _, ppg_length,\
+        spk_emb_batch, _, log_F0_batch, _,\
+        _, energy_batch, _, energy_length = batch
 
         pred_mel, pred_pitch, pred_energy = self.model.forward(
             x=ppg_batch,
