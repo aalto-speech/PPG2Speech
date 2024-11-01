@@ -19,7 +19,7 @@ stats:
 	python -m ppg_tts.feature_extract.make_stats --data_dir $(data_dir)
 
 tts_train:
-	python -m ppg_tts.train
+	python -m ppg_tts.main fit -c $(config)
 
 tts_inference:
-	python -m ppg_tts.inference
+	python -m ppg_tts.main predict -c $(config)

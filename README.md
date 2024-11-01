@@ -38,3 +38,7 @@ Finished some modules in the system.Calculate F0_min, F0_max, energy_min, enery_
 Variation adapter need testing.
 
 Ready to build Conformer TTS model.
+
+## 2024.11.01
+
+Training, Validation, Testing loop done. Can proceed to training.

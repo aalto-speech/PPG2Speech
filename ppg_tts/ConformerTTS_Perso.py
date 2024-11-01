@@ -72,6 +72,8 @@ class ConformerTTSModel(L.LightningModule):
                  backend: str="torchaudio",):
         super().__init__()
 
+        self.save_hyperparameters()
+
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
         self.pitch_loss = pitch_loss
