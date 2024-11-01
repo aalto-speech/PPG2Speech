@@ -3,7 +3,8 @@ import torchaudio
 from loguru import logger
 from pathlib import Path
 from torch.nn.utils.rnn import pad_sequence
-from torchaudio.transforms import Resample, MelSpectrogram
+from torchaudio.transforms import Resample
+from speechbrain.lobes.models.HifiGAN import mel_spectogram
 from typing import Tuple, Dict, List
 from torch.utils.data import Dataset
 from kaldiio import ReadHelper
@@ -57,14 +58,6 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         self.spk_embs = self._read_scp_ark(self.spk_emb_path)
         self.log_F0 = self._read_scp_ark(self.log_F0_path)
 
-        self.melspec = MelSpectrogram(sample_rate=22050,
-                                      n_fft=1024,
-                                      win_length=1024,
-                                      hop_length=256,
-                                      f_min=125,
-                                      f_max=7600,
-                                      n_mels=80)
-
 
     def __getitem__(self, index: int) -> Dict:
         if index >= len(self.id2key):
@@ -78,7 +71,19 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         
         waveform = self.resampler(waveform)
 
-        mel = self.melspec(waveform)
+        mel = mel_spectogram(sample_rate=22050,
+                            n_fft=1024,
+                            win_length=1024,
+                            hop_length=256,
+                            f_min=125,
+                            f_max=7600,
+                            n_mels=80,
+                            normalized=True,
+                            compression=True,
+                            audio=waveform,
+                            power=2,
+                            norm=None,
+                            mel_scale='htk')
 
         energy = torch.sqrt(torch.sum(mel ** 2, dim=-1))
 
