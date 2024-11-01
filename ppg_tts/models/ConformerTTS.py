@@ -84,8 +84,8 @@ class ConformerTTS(nn.Module):
                 x: torch.Tensor,
                 x_length: torch.Tensor,
                 spk_emb: torch.Tensor,
-                pitch_target: torch.Tensor,
-                energy_target: torch.Tensor,
+                pitch_target: torch.Tensor | None,
+                energy_target: torch.Tensor | None,
                 energy_length: torch.Tensor,
                 mel_mask: torch.Tensor):
         """
@@ -94,12 +94,13 @@ class ConformerTTS(nn.Module):
             spk_emb: speaker_embedding, shape (B, E_spk)
             pitch_target: shape (B, T_mel)
             energy_target: shape (B, T_mel)
+            mel_mask: shape (B, T_mel)
         Returns:
             prediected_mel: shape (B, T, 80)
             predicted_pitch: shape (B, T_mel)
             predicted_energy: shape (B, T_mel)
         """
-        T_mel = energy_target.size(1)
+        T_mel = mel_mask.size(1)
         x = self._interpolate(x, T_mel)
 
         encoded_spk_emb = self.spk_emb_enc(spk_emb)
@@ -115,6 +116,6 @@ class ConformerTTS(nn.Module):
 
         z, z_length = self.conformer_dec(z, z_length)
 
-        prediected_mel = self.pred_net(z)
+        predicted_mel = self.pred_net(z)
 
-        return prediected_mel, predicted_pitch, predicted_energy
+        return predicted_mel, predicted_pitch, predicted_energy

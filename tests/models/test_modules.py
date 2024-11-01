@@ -55,6 +55,14 @@ class TestVarianceAdapter(unittest.TestCase):
         self.assertTupleEqual(pitch_pred.shape, (4, 10))
         self.assertTupleEqual(energy_pred.shape, (4, 10))
 
+    def testForwardNoTarget(self):
+        y, pitch_pred, energy_pred = self.module(self.x)
+        
+        self.assertTupleEqual(y.shape, (4, 10, 256))
+
+        self.assertTupleEqual(pitch_pred.shape, (4, 10))
+        self.assertTupleEqual(energy_pred.shape, (4, 10))
+
 if __name__ == "__main__":
     TestVariancePredictor.run()
     TestSpeakerEmbeddingEncoder.run()

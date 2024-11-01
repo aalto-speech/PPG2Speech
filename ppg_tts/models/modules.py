@@ -55,13 +55,19 @@ class VarianceAdaptor(nn.Module):
 
     def get_pitch_embedding(self, x, target, mask):
         prediction = self.pitch_predictor(x, mask)
-        embedding = self.pitch_embedding(torch.bucketize(target, self.pitch_bins))
+        if target is not None:
+            embedding = self.pitch_embedding(torch.bucketize(target, self.pitch_bins))
+        else:
+            embedding = self.pitch_embedding(torch.bucketize(prediction, self.pitch_bins))
         
         return prediction, embedding
 
     def get_energy_embedding(self, x, target, mask):
         prediction = self.energy_predictor(x, mask)
-        embedding = self.energy_embedding(torch.bucketize(target, self.energy_bins))
+        if target is not None:
+            embedding = self.pitch_embedding(torch.bucketize(target, self.energy_bins))
+        else:
+            embedding = self.pitch_embedding(torch.bucketize(prediction, self.energy_bins))
         
         return prediction, embedding
 

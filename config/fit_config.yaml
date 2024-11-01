@@ -1,0 +1,75 @@
+# lightning.pytorch==2.4.0
+seed_everything: true
+trainer:
+  accelerator: auto
+  strategy: auto
+  devices: auto
+  num_nodes: 1
+  precision: null
+  logger: 
+    class_path:
+      init_args:
+  callbacks: null
+  fast_dev_run: false
+  max_epochs: null
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  overfit_batches: 0.0
+  val_check_interval: null
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: null
+  log_every_n_steps: null
+  enable_checkpointing: null
+  enable_progress_bar: null
+  enable_model_summary: null
+  accumulate_grad_batches: 1
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  deterministic: null
+  benchmark: null
+  inference_mode: true
+  use_distributed_sampler: true
+  profiler: null
+  detect_anomaly: false
+  barebones: false
+  plugins: null
+  sync_batchnorm: false
+  reload_dataloaders_every_n_epochs: 0
+  default_root_dir: null
+model:
+  mel_loss:
+    class_path:
+      init_args:
+  energy_loss: 
+    class_path:
+      init_args:
+  pitch_loss: 
+    class_path:
+      init_args:
+  ppg_dim: null
+  encode_dim: null
+  num_heads: null
+  num_layers: null
+  encode_ffn_dim: null
+  encode_kernel_size: null
+  adapter_filter_size: null
+  adapter_kernel_size: null
+  n_bins: null
+  stats_path: null
+  spk_emb_size: null
+  emb_hidden_size: null
+  dropout: 0.1
+  target_dim: 80
+  backend: torchaudio
+data:
+  data_dir: ./data
+  batch_size: 16
+optimizer: null
+lr_scheduler: null
+ckpt_path: null

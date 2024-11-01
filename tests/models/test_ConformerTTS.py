@@ -52,6 +52,21 @@ class TestConformerTTSTorchAudio(unittest.TestCase):
         self.assertTupleEqual(pitch_pred.shape, (4, 13))
         self.assertTupleEqual(energy_pred.shape, (4, 13))
 
+    def testForwardNoTarget(self):
+        y, pitch_pred, energy_pred = self.model(
+            x=self.x,
+            x_length=self.x_length,
+            spk_emb=self.spk_emb,
+            pitch_target=None,
+            energy_target=None,
+            energy_length=self.energy_length,
+            mel_mask=self.mel_mask
+        )
+        
+        self.assertTupleEqual(y.shape, (4, 13, 80))
+        self.assertTupleEqual(pitch_pred.shape, (4, 13))
+        self.assertTupleEqual(energy_pred.shape, (4, 13))
+
 class TestConformerTTSSpeechBrain(unittest.TestCase):
     def setUp(self):
         return super().setUp()
