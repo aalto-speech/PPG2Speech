@@ -1,1 +1,2 @@
-from .test_modules import TestSpeakerEmbeddingEncoder, TestVariancePredictor
+from .test_modules import TestSpeakerEmbeddingEncoder, TestVariancePredictor, TestVarianceAdapter
+from .test_ConformerTTS import TestConformerTTSTorchAudio, TestConformerTTSSpeechBrain

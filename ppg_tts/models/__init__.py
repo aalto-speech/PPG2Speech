@@ -1,2 +1,3 @@
 from .ASRModels import PPGFromWav2Vec2Pretrained
 from .EmbeddingModels import SpeakerEmbeddingPretrained
+from .ConformerTTS import ConformerTTS

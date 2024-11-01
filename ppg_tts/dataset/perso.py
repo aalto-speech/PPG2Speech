@@ -116,21 +116,24 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Tuple[torch.Tensor]:
 
         mask = lengths <= max_len_range
 
-        return batch_tensor, mask
+        return batch_tensor, mask, lengths.squeeze()
 
-    mel_batch, mel_mask = _pad_and_batch("melspectrogram")
-    ppg_batch, ppg_mask = _pad_and_batch("ppg")
-    spk_emb_batch, spk_emb_mask = _pad_and_batch("spk_emb")
-    log_F0_batch, log_F0_mask = _pad_and_batch("log_F0")
-    energy_batch, energy_mask = _pad_and_batch("energy")
+    mel_batch, mel_mask, _ = _pad_and_batch("melspectrogram")
+    ppg_batch, ppg_mask, ppg_length = _pad_and_batch("ppg")
+    spk_emb_batch, spk_emb_mask, _ = _pad_and_batch("spk_emb")
+    log_F0_batch, log_F0_mask, log_F0_length = _pad_and_batch("log_F0")
+    energy_batch, energy_mask, energy_length = _pad_and_batch("energy")
 
     return (mel_batch,
             mel_mask,
             ppg_batch,
             ppg_mask,
+            ppg_length,
             spk_emb_batch,
             spk_emb_mask,
             log_F0_batch,
             log_F0_mask,
+            log_F0_length,
             energy_batch,
-            energy_mask)
+            energy_mask,
+            energy_length)

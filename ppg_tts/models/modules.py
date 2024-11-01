@@ -4,7 +4,12 @@ from torch import nn
 from collections import OrderedDict
 
 class VarianceAdaptor(nn.Module):
-    """Variance Adaptor"""
+    """
+    Variance Adaptor
+    Input:
+        x: (B, T, E)
+        energy/pitch target: (B, T)
+    """
 
     def __init__(self,
                  input_size: int,
@@ -92,7 +97,7 @@ class SpeakerEmbeddingEncoder(nn.Module):
                  input_size: int,
                  model_size: int,
                  output_size: int,
-                 dropout: float=0.1):
+                 dropout: float=0.5):
         super(SpeakerEmbeddingEncoder, self).__init__()
 
         self.input_size = input_size
