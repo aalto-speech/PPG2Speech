@@ -108,7 +108,7 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         return key2feat
 
 
-def PersoCollateFn(batch_lst: List[Dict]) -> Tuple[torch.Tensor]:
+def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     def _pad_and_batch(key: str):
         items = [d[key] for d in batch_lst]
 
@@ -129,16 +129,16 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Tuple[torch.Tensor]:
     log_F0_batch, log_F0_mask, log_F0_length = _pad_and_batch("log_F0")
     energy_batch, energy_mask, energy_length = _pad_and_batch("energy")
 
-    return (mel_batch,
-            mel_mask,
-            ppg_batch,
-            ppg_mask,
-            ppg_length,
-            spk_emb_batch,
-            spk_emb_mask,
-            log_F0_batch,
-            log_F0_mask,
-            log_F0_length,
-            energy_batch,
-            energy_mask,
-            energy_length)
+    return {"mel": mel_batch,
+            "mel_mask": mel_mask,
+            "ppg": ppg_batch,
+            "ppg_mask": ppg_mask,
+            "ppg_len": ppg_length,
+            "spk_emb": spk_emb_batch,
+            "spk_emb_mask": spk_emb_mask,
+            "log_F0": log_F0_batch,
+            "log_F0_mask": log_F0_mask,
+            "log_F0_len": log_F0_length,
+            "energy": energy_batch,
+            "energy_mask": energy_mask,
+            "energy_len": energy_length}

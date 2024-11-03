@@ -103,23 +103,19 @@ class ConformerTTSModel(L.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        mel_batch, mel_mask, ppg_batch, _, ppg_length,\
-        spk_emb_batch, _, log_F0_batch, _,\
-        _, energy_batch, _, energy_length = batch
-
         pred_mel, pred_pitch, pred_energy = self.model.forward(
-            ppg_batch,
-            ppg_length,
-            spk_emb_batch,
-            log_F0_batch,
-            energy_batch,
-            energy_length,
-            mel_mask
+            batch["ppg"],
+            batch["ppg_len"],
+            batch["spk_emb"],
+            batch["log_F0"],
+            batch["energy"],
+            batch["energy_len"],
+            batch["mel_mask"]
         )
 
-        l_mel = self.mel_loss(pred_mel, mel_batch)
-        l_pitch = self.pitch_loss(pred_pitch, log_F0_batch)
-        l_energy = self.energy_loss(pred_energy, energy_batch)
+        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        l_energy = self.energy_loss(pred_energy, batch["energy"])
 
         total = l_mel + l_pitch + l_energy
 
@@ -132,23 +128,19 @@ class ConformerTTSModel(L.LightningModule):
         return total
 
     def validation_step(self, batch, batch_idx):
-        mel_batch, mel_mask, ppg_batch, _, ppg_length,\
-        spk_emb_batch, _, log_F0_batch, _,\
-        _, energy_batch, _, energy_length = batch
-
         pred_mel, pred_pitch, pred_energy = self.model.forward(
-            ppg_batch,
-            ppg_length,
-            spk_emb_batch,
-            log_F0_batch,
-            energy_batch,
-            energy_length,
-            mel_mask
+            x=batch["ppg"],
+            x_length=batch["ppg_len"],
+            spk_emb=batch["spk_emb"],
+            energy_length=batch["energy_len"],
+            mel_mask=batch["mel_mask"],
+            pitch_target=None,
+            energy_target=None,
         )
 
-        l_mel = self.mel_loss(pred_mel, mel_batch)
-        l_pitch = self.pitch_loss(pred_pitch, log_F0_batch)
-        l_energy = self.energy_loss(pred_energy, energy_batch)
+        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        l_energy = self.energy_loss(pred_energy, batch["energy"])
 
         total = l_mel + l_pitch + l_energy
 
@@ -156,26 +148,24 @@ class ConformerTTSModel(L.LightningModule):
             "val/mel_loss": l_mel,
             "val/pitch_loss": l_pitch,
             "val/energy_loss": l_energy,
-            "val/total_loss": total})
+            "val/total_loss": l_mel + l_pitch + l_energy})
         
         return total
 
     def test_step(self, batch, batch_idx):
-        mel_batch, mel_mask, ppg_batch, _, ppg_length,\
-        spk_emb_batch, _, log_F0_batch, _,\
-        _, energy_batch, _, energy_length = batch
-
         pred_mel, pred_pitch, pred_energy = self.model.forward(
-            x=ppg_batch,
-            x_length=ppg_length,
-            spk_emb=spk_emb_batch,
-            energy_length=energy_length,
-            mel_mask=mel_mask
+            x=batch["ppg"],
+            x_length=batch["ppg_len"],
+            spk_emb=batch["spk_emb"],
+            energy_length=batch["energy_len"],
+            mel_mask=batch["mel_mask"],
+            pitch_target=None,
+            energy_target=None,
         )
 
-        l_mel = self.mel_loss(pred_mel, mel_batch)
-        l_pitch = self.pitch_loss(pred_pitch, log_F0_batch)
-        l_energy = self.energy_loss(pred_energy, energy_batch)
+        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        l_energy = self.energy_loss(pred_energy, batch["energy"])
 
         total = l_mel + l_pitch + l_energy
 
@@ -183,7 +173,7 @@ class ConformerTTSModel(L.LightningModule):
             "test/mel_loss": l_mel,
             "test/pitch_loss": l_pitch,
             "test/energy_loss": l_energy,
-            "test/total_loss": total})
+            "test/total_loss": l_mel + l_pitch + l_energy})
         
         return total
 
