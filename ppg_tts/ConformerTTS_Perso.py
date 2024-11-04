@@ -103,9 +103,9 @@ class ConformerTTSModel(L.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        import pdb
-        pdb.set_trace()
-        pred_mel, pred_pitch, pred_energy = self.model.forward(
+        # import pdb
+        # pdb.set_trace()
+        pred_mel = self.model.forward(
             batch["ppg"],
             batch["ppg_len"],
             batch["spk_emb"],
@@ -116,68 +116,71 @@ class ConformerTTSModel(L.LightningModule):
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
-        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
-        l_energy = self.energy_loss(pred_energy, batch["energy"])
+        # l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        # l_energy = self.energy_loss(pred_energy, batch["energy"])
 
-        total = l_mel + l_pitch + l_energy
+        # total = l_mel + l_pitch + l_energy
 
         self.log_dict({
             "train/mel_loss": l_mel,
-            "train/pitch_loss": l_pitch,
-            "train/energy_loss": l_energy,
-            "train/total_loss": l_mel + l_pitch + l_energy})
+        #     "train/pitch_loss": l_pitch,
+        #     "train/energy_loss": l_energy,
+        #     "train/total_loss": l_mel + l_pitch + l_energy
+        })
         
-        return total
+        return l_mel
 
     def validation_step(self, batch, batch_idx):
-        pred_mel, pred_pitch, pred_energy = self.model.forward(
-            x=batch["ppg"],
-            x_length=batch["ppg_len"],
-            spk_emb=batch["spk_emb"],
-            energy_length=batch["energy_len"],
-            mel_mask=batch["mel_mask"],
-            pitch_target=None,
-            energy_target=None,
+        pred_mel = self.model.forward(
+            batch["ppg"],
+            batch["ppg_len"],
+            batch["spk_emb"],
+            batch["log_F0"],
+            batch["energy"],
+            batch["energy_len"],
+            batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
-        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
-        l_energy = self.energy_loss(pred_energy, batch["energy"])
+        # l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        # l_energy = self.energy_loss(pred_energy, batch["energy"])
 
-        total = l_mel + l_pitch + l_energy
+        # total = l_mel + l_pitch + l_energy
 
         self.log_dict({
             "val/mel_loss": l_mel,
-            "val/pitch_loss": l_pitch,
-            "val/energy_loss": l_energy,
-            "val/total_loss": l_mel + l_pitch + l_energy})
+        #     "train/pitch_loss": l_pitch,
+        #     "train/energy_loss": l_energy,
+        #     "train/total_loss": l_mel + l_pitch + l_energy
+        })
         
-        return total
+        return l_mel
 
     def test_step(self, batch, batch_idx):
-        pred_mel, pred_pitch, pred_energy = self.model.forward(
-            x=batch["ppg"],
-            x_length=batch["ppg_len"],
-            spk_emb=batch["spk_emb"],
-            energy_length=batch["energy_len"],
-            mel_mask=batch["mel_mask"],
-            pitch_target=None,
-            energy_target=None,
+        pred_mel = self.model.forward(
+            batch["ppg"],
+            batch["ppg_len"],
+            batch["spk_emb"],
+            batch["log_F0"],
+            batch["energy"],
+            batch["energy_len"],
+            batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
-        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
-        l_energy = self.energy_loss(pred_energy, batch["energy"])
+        # l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        # l_energy = self.energy_loss(pred_energy, batch["energy"])
 
-        total = l_mel + l_pitch + l_energy
+        # total = l_mel + l_pitch + l_energy
 
         self.log_dict({
             "test/mel_loss": l_mel,
-            "test/pitch_loss": l_pitch,
-            "test/energy_loss": l_energy,
-            "test/total_loss": l_mel + l_pitch + l_energy})
+        #     "train/pitch_loss": l_pitch,
+        #     "train/energy_loss": l_energy,
+        #     "train/total_loss": l_mel + l_pitch + l_energy
+        })
         
-        return total
+        return l_mel
 
     def predict_step(self, batch, batch_idx):
         raise NotImplementedError("Not implementation for prediction yet. Need Vocoder.")

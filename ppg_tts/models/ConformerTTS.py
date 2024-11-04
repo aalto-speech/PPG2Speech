@@ -28,7 +28,7 @@ class ConformerTTS(nn.Module):
                  backend: str="torchaudio"):
         super(ConformerTTS, self).__init__()
 
-        self.pre_net = nn.Linear(in_features=ppg_dim,
+        self.pre_net = nn.Linear(in_features=ppg_dim+1,
                                  out_features=encode_dim,
                                  bias=True)
         
@@ -99,23 +99,26 @@ class ConformerTTS(nn.Module):
             prediected_mel: shape (B, T, 80)
             predicted_pitch: shape (B, T_mel)
             predicted_energy: shape (B, T_mel)
-        """
+        """        
         T_mel = mel_mask.size(1)
         x = self._interpolate(x, T_mel)
-
+        
+        x = torch.cat([x, pitch_target.unsqueeze(-1)],
+                      dim=-1)
+        
         encoded_spk_emb = self.spk_emb_enc(spk_emb)
-
+        
         z = self.pre_net(x)
-
+        
         z, z_length = self.conformer_enc(z, energy_length)
-
-        z, predicted_pitch, predicted_energy = \
-            self.variance_adapter(z, mel_mask, pitch_target, energy_target)
-
+        
+        # z, predicted_pitch, predicted_energy = \
+        #     self.variance_adapter(z, mel_mask, pitch_target, energy_target)
+        
         z = z + encoded_spk_emb.unsqueeze(1)
-
+        
         z, z_length = self.conformer_dec(z, z_length)
-
+        
         predicted_mel = self.pred_net(z)
-
-        return predicted_mel, predicted_pitch, predicted_energy
+        
+        return predicted_mel

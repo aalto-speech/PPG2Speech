@@ -1,6 +1,6 @@
 import numpy as np
 from loguru import logger
-from ..utils import build_parser
+from ..utils import build_parser, convert_continuos_f0
 from ..dataset import PersoDatasetBasic
 from librosa import pyin
 from kaldiio import WriteHelper
@@ -23,7 +23,10 @@ if __name__ == "__main__":
                                                          sr=22050,
                                                          hop_length=256,
                                                          frame_length=1024)
-                foundamental_freq = np.log(foundamental_freq.squeeze())
+                
+                foundamental_freq = convert_continuos_f0(foundamental_freq.squeeze())
+                foundamental_freq = np.log(foundamental_freq,
+                                           where=foundamental_freq>0)
                 writer(utterance["key"], foundamental_freq)
                 voiced_writer(utterance["key"], voiced_flag.squeeze().astype(np.int32))
                 logger.info(f"{utterance['key']}: wav length {wav.size(-1)}, log_F0 shape {foundamental_freq.shape}")
