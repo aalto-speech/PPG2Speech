@@ -112,6 +112,10 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     def _pad_and_batch(key: str):
         items = [d[key] for d in batch_lst]
 
+        shape = [item.shape for item in items]
+
+        print("key:", shape)
+
         batch_tensor = pad_sequence(items, batch_first=True)
 
         max_len = batch_tensor.size(1)

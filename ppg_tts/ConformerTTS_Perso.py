@@ -17,8 +17,8 @@ class PersoDataModule(L.LightningDataModule):
         self.test_dir = Path(data_dir) / "test"
         self.batch_size = batch_size
 
-    def prepare_data(self):
-        raise NotImplementedError("Please use ./scripts/perso_data.sh for data preparation.")
+    # def prepare_data(self):
+    #     raise NotImplementedError("Please use ./scripts/perso_data.sh for data preparation.")
     
     def setup(self, stage: str):
         if stage == 'fit':
@@ -30,19 +30,19 @@ class PersoDataModule(L.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(self.train,
                           batch_size=self.batch_size,
-                          num_workers=8,
+                          num_workers=1,
                           collate_fn=PersoCollateFn)
     
     def val_dataloader(self):
         return DataLoader(self.val,
                           batch_size=self.batch_size,
-                          num_workers=8,
+                          num_workers=1,
                           collate_fn=PersoCollateFn)
     
     def test_dataloader(self):
         return DataLoader(self.test,
                           batch_size=self.batch_size,
-                          num_workers=8,
+                          num_workers=1,
                           collate_fn=PersoCollateFn)
     
     def predict_dataloader(self):
@@ -180,3 +180,14 @@ class ConformerTTSModel(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         raise NotImplementedError("Not implementation for prediction yet. Need Vocoder.")
     
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(),
+                                      lr=0.001)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=optimizer,
+            patience=2,
+            factor=0.5
+        )
+        return {"optimizer": optimizer,
+                "lr_scheduler": lr_scheduler,
+                "monitor": "val/total_loss"}
