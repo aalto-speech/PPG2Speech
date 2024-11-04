@@ -102,9 +102,9 @@ class ConformerTTSModel(L.LightningModule):
             pitch_max=stats['pitch_max'],
         )
 
-        self.model.double()
-
     def training_step(self, batch, batch_idx):
+        import pdb
+        pdb.set_trace()
         pred_mel, pred_pitch, pred_energy = self.model.forward(
             batch["ppg"],
             batch["ppg_len"],

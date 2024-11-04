@@ -133,16 +133,16 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     log_F0_batch, log_F0_mask, log_F0_length = _pad_and_batch("log_F0")
     energy_batch, energy_mask, energy_length = _pad_and_batch("energy")
 
-    return {"mel": mel_batch.double(),
+    return {"mel": mel_batch.float(),
             "mel_mask": mel_mask,
-            "ppg": ppg_batch.double(),
+            "ppg": ppg_batch.float(),
             "ppg_mask": ppg_mask,
             "ppg_len": ppg_length,
-            "spk_emb": spk_emb_batch.double(),
+            "spk_emb": spk_emb_batch.float(),
             "spk_emb_mask": spk_emb_mask,
-            "log_F0": log_F0_batch.double(),
+            "log_F0": log_F0_batch.float(),
             "log_F0_mask": log_F0_mask,
             "log_F0_len": log_F0_length,
-            "energy": energy_batch.double(),
+            "energy": energy_batch.float(),
             "energy_mask": energy_mask,
             "energy_len": energy_length}
