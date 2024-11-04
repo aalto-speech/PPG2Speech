@@ -68,7 +68,7 @@ model:
   backend: torchaudio
 data:
   data_dir: ./data
-  batch_size: 8
+  batch_size: 16
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

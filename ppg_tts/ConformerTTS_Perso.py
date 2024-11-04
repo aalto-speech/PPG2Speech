@@ -30,19 +30,19 @@ class PersoDataModule(L.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(self.train,
                           batch_size=self.batch_size,
-                          num_workers=1,
+                          num_workers=8,
                           collate_fn=PersoCollateFn)
     
     def val_dataloader(self):
         return DataLoader(self.val,
                           batch_size=self.batch_size,
-                          num_workers=1,
+                          num_workers=8,
                           collate_fn=PersoCollateFn)
     
     def test_dataloader(self):
         return DataLoader(self.test,
                           batch_size=self.batch_size,
-                          num_workers=1,
+                          num_workers=8,
                           collate_fn=PersoCollateFn)
     
     def predict_dataloader(self):
@@ -182,7 +182,7 @@ class ConformerTTSModel(L.LightningModule):
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),
-                                      lr=0.001)
+                                      lr=4)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer,
             patience=2,
