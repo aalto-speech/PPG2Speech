@@ -28,7 +28,7 @@ class ConformerTTS(nn.Module):
                  backend: str="torchaudio"):
         super(ConformerTTS, self).__init__()
 
-        self.pre_net = nn.Linear(in_features=ppg_dim+1,
+        self.pre_net = nn.Linear(in_features=ppg_dim+2,
                                  out_features=encode_dim,
                                  bias=True)
         
@@ -84,8 +84,8 @@ class ConformerTTS(nn.Module):
                 x: torch.Tensor,
                 x_length: torch.Tensor,
                 spk_emb: torch.Tensor,
-                pitch_target: torch.Tensor | None,
-                energy_target: torch.Tensor | None,
+                pitch_target: torch.Tensor,
+                v_flag: torch.Tensor,
                 energy_length: torch.Tensor,
                 mel_mask: torch.Tensor):
         """
@@ -103,7 +103,10 @@ class ConformerTTS(nn.Module):
         T_mel = mel_mask.size(1)
         x = self._interpolate(x, T_mel)
         
-        x = torch.cat([x, pitch_target.unsqueeze(-1)],
+        x = torch.cat([x,
+                       pitch_target.unsqueeze(-1),
+                       v_flag.unsqueeze(-1)
+                       ],
                       dim=-1)
         
         encoded_spk_emb = self.spk_emb_enc(spk_emb)

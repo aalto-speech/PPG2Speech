@@ -110,7 +110,7 @@ class ConformerTTSModel(L.LightningModule):
             batch["ppg_len"],
             batch["spk_emb"],
             batch["log_F0"],
-            batch["energy"],
+            batch["v_flag"],
             batch["energy_len"],
             batch["mel_mask"]
         )
@@ -136,7 +136,7 @@ class ConformerTTSModel(L.LightningModule):
             batch["ppg_len"],
             batch["spk_emb"],
             batch["log_F0"],
-            batch["energy"],
+            batch["v_flag"],
             batch["energy_len"],
             batch["mel_mask"]
         )
@@ -162,7 +162,7 @@ class ConformerTTSModel(L.LightningModule):
             batch["ppg_len"],
             batch["spk_emb"],
             batch["log_F0"],
-            batch["energy"],
+            batch["v_flag"],
             batch["energy_len"],
             batch["mel_mask"]
         )

@@ -53,10 +53,12 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         self.ppg_path = Path(data_dir, "ppg.scp")
         self.spk_emb_path = Path(data_dir, "embedding.scp")
         self.log_F0_path = Path(data_dir, "log_f0.scp")
+        self.v_flag = Path(data_dir, "voiced.scp")
 
         self.ppgs = self._read_scp_ark(self.ppg_path)
         self.spk_embs = self._read_scp_ark(self.spk_emb_path)
         self.log_F0 = self._read_scp_ark(self.log_F0_path)
+        self.v_flag = self._read_scp_ark(self.v_flag)
 
 
     def __getitem__(self, index: int) -> Dict:
@@ -94,7 +96,8 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 "ppg": torch.from_numpy(self.ppgs[key].copy()),
                 "spk_emb": torch.from_numpy(self.spk_embs[key].copy()),
                 "log_F0": torch.from_numpy(self.log_F0[key].copy()),
-                "energy": energy.squeeze()}
+                "energy": energy.squeeze(),
+                "v_flag": torch.from_numpy(self.v_flag[key].copy())}
 
     def __len__(self) -> int:
         return super().__len__()
@@ -115,6 +118,9 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
         if key == "melspectrogram":
             items = [item.transpose(0, 1) for item in items]
 
+        if key == "v_flag":
+            items = [item.float() for item in items]
+
         lengths = torch.tensor([item.size(0) for item in items]).unsqueeze(1)
 
         batch_tensor = pad_sequence(items, batch_first=True)
@@ -132,6 +138,7 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     spk_emb_batch, spk_emb_mask, _ = _pad_and_batch("spk_emb")
     log_F0_batch, log_F0_mask, log_F0_length = _pad_and_batch("log_F0")
     energy_batch, energy_mask, energy_length = _pad_and_batch("energy")
+    vflag_batch, _, _ = _pad_and_batch("v_flag")
 
     return {"mel": mel_batch.float(),
             "mel_mask": mel_mask,
@@ -145,4 +152,5 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
             "log_F0_len": log_F0_length,
             "energy": energy_batch.float(),
             "energy_mask": energy_mask,
-            "energy_len": energy_length}
+            "energy_len": energy_length,
+            "vflag": vflag_batch}
