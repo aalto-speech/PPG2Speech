@@ -8,13 +8,13 @@ trainer:
   precision: null
   logger: 
     class_path: lightning.pytorch.loggers.WandbLogger
-      init_args:
-        project: "PPG_TTS_Conformer"
-        save_dir: "./logs/"
+    init_args:
+      project: "PPG_TTS_Conformer"
+      save_dir: "./logs/"
   callbacks: null
   fast_dev_run: false
-  max_epochs: null
-  min_epochs: null
+  max_epochs: 50
+  min_epochs: 20
   max_steps: -1
   min_steps: null
   max_time: null
@@ -26,7 +26,7 @@ trainer:
   val_check_interval: null
   check_val_every_n_epoch: 1
   num_sanity_val_steps: null
-  log_every_n_steps: null
+  log_every_n_steps: 10
   enable_checkpointing: null
   enable_progress_bar: null
   enable_model_summary: null
@@ -46,32 +46,36 @@ trainer:
   default_root_dir: null
 model:
   mel_loss:
-    class_path:
-      init_args:
+    class_path: torch.nn.L1Loss
   energy_loss: 
-    class_path:
-      init_args:
+    class_path: torch.nn.MSELoss
   pitch_loss: 
-    class_path:
-      init_args:
-  ppg_dim: null
-  encode_dim: null
-  num_heads: null
-  num_layers: null
-  encode_ffn_dim: null
-  encode_kernel_size: null
-  adapter_filter_size: null
-  adapter_kernel_size: null
-  n_bins: null
-  stats_path: null
-  spk_emb_size: null
-  emb_hidden_size: null
+    class_path: torch.nn.MSELoss
+  ppg_dim: 34
+  encode_dim: 256
+  num_heads: 4
+  num_layers: 6
+  encode_ffn_dim: 1024
+  encode_kernel_size: 15
+  adapter_filter_size: 256
+  adapter_kernel_size: 3
+  n_bins: 256
+  stats_path: ./data/train/stats.json
+  spk_emb_size: 512
+  emb_hidden_size: 2048
   dropout: 0.1
   target_dim: 80
   backend: torchaudio
 data:
   data_dir: ./data
-  batch_size: 16
-optimizer: null
-lr_scheduler: null
-ckpt_path: null
+  batch_size: 8
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 1e-3
+lr_scheduler:
+  class_path: torch.optim.lr_scheduler.ReduceLROnPlateau
+  init_args:
+    factor: 0.5
+    patience: 2
+ckpt_path: ./exp/debug/
