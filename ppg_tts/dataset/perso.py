@@ -84,8 +84,8 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                             power=2,
                             norm=None,
                             mel_scale='htk')
-
-        energy = torch.sqrt(torch.sum(mel ** 2, dim=-1))
+        
+        energy = torch.sqrt(torch.sum(mel ** 2, dim=1))
 
         return {"key": key,
                 "feature": waveform,
@@ -94,7 +94,7 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 "ppg": torch.from_numpy(self.ppgs[key].copy()),
                 "spk_emb": torch.from_numpy(self.spk_embs[key].copy()),
                 "log_F0": torch.from_numpy(self.log_F0[key].copy()),
-                "energy": energy}
+                "energy": energy.squeeze()}
 
     def __len__(self) -> int:
         return super().__len__()
@@ -110,17 +110,17 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
 
 def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     def _pad_and_batch(key: str):
-        items = [d[key] for d in batch_lst]
+        items = [d[key].squeeze() for d in batch_lst]
 
-        shape = [item.shape for item in items]
+        if key == "melspectrogram":
+            items = [item.transpose(0, 1) for item in items]
 
-        print("key:", shape)
+        lengths = torch.tensor([item.size(0) for item in items]).unsqueeze(1)
 
         batch_tensor = pad_sequence(items, batch_first=True)
 
         max_len = batch_tensor.size(1)
 
-        lengths = torch.tensor([item.size(0) for item in items]).unsqueeze(1)
         max_len_range = torch.arange(max_len).unsqueeze(0)
 
         mask = lengths <= max_len_range
@@ -133,16 +133,16 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     log_F0_batch, log_F0_mask, log_F0_length = _pad_and_batch("log_F0")
     energy_batch, energy_mask, energy_length = _pad_and_batch("energy")
 
-    return {"mel": mel_batch,
+    return {"mel": mel_batch.float(),
             "mel_mask": mel_mask,
-            "ppg": ppg_batch,
+            "ppg": ppg_batch.float(),
             "ppg_mask": ppg_mask,
             "ppg_len": ppg_length,
-            "spk_emb": spk_emb_batch,
+            "spk_emb": spk_emb_batch.float(),
             "spk_emb_mask": spk_emb_mask,
-            "log_F0": log_F0_batch,
+            "log_F0": log_F0_batch.float(),
             "log_F0_mask": log_F0_mask,
             "log_F0_len": log_F0_length,
-            "energy": energy_batch,
+            "energy": energy_batch.float(),
             "energy_mask": energy_mask,
             "energy_len": energy_length}

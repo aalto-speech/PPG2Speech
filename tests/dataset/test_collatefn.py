@@ -7,28 +7,28 @@ class TestPersoCollateFn(unittest.TestCase):
     def setUp(self):
         dummy_batch_lst = [
             {
-                "melspectrogram": torch.randn((4,10)),
+                "melspectrogram": torch.randn((10,4)),
                 "ppg": torch.randn((3,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(4),
                 "energy": torch.randn(4)
             },
             {
-                "melspectrogram": torch.randn((6,10)),
+                "melspectrogram": torch.randn((10,6)),
                 "ppg": torch.randn((4,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(6),
                 "energy": torch.randn(6)
             },
             {
-                "melspectrogram": torch.randn((9,10)),
+                "melspectrogram": torch.randn((10,9)),
                 "ppg": torch.randn((7,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(9),
                 "energy": torch.randn(9)
             },
             {
-                "melspectrogram": torch.randn((13,10)),
+                "melspectrogram": torch.randn((10,13)),
                 "ppg": torch.randn((11,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(13),
