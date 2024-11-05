@@ -93,7 +93,8 @@ class ConformerTTS(nn.Module):
             x: input PPG, shape (B, T_ppg, E)
             spk_emb: speaker_embedding, shape (B, E_spk)
             pitch_target: shape (B, T_mel)
-            energy_target: shape (B, T_mel)
+            v_flag: shape (B, T_mel)
+            energy_length: shape (B,)
             mel_mask: shape (B, T_mel)
         Returns:
             prediected_mel: shape (B, T, 80)
