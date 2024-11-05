@@ -68,11 +68,14 @@ class ConformerTTSModel(L.LightningModule):
                  spk_emb_size: int,
                  emb_hidden_size: int,
                  dropout: float=0.1,
-                 target_dim:int=80,
-                 backend: str="torchaudio",):
+                 target_dim: int=80,
+                 backend: str="torchaudio",
+                 lr: float=1e-4):
         super().__init__()
 
         self.save_hyperparameters()
+
+        self.lr = lr
 
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
@@ -187,7 +190,7 @@ class ConformerTTSModel(L.LightningModule):
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),
-                                      lr=1e-3)
+                                      lr=self.lr)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer,
             patience=2,
