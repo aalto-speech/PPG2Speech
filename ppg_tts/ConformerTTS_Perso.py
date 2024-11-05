@@ -70,12 +70,17 @@ class ConformerTTSModel(L.LightningModule):
                  dropout: float=0.1,
                  target_dim: int=80,
                  backend: str="torchaudio",
-                 lr: float=1e-4):
+                 lr: float=1e-4,
+                 lr_scheduler: str="plateau",
+                 warm_up_steps: int=25000):
         super().__init__()
 
         self.save_hyperparameters()
 
         self.lr = lr
+        self.lr_scheduler = lr_scheduler
+        self.warm_up_steps = warm_up_steps
+        self.model_size = encode_ffn_dim
 
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
@@ -126,9 +131,6 @@ class ConformerTTSModel(L.LightningModule):
 
         self.log_dict({
             "train/mel_loss": l_mel,
-        #     "train/pitch_loss": l_pitch,
-        #     "train/energy_loss": l_energy,
-        #     "train/total_loss": l_mel + l_pitch + l_energy
         })
         
         return l_mel
@@ -152,9 +154,6 @@ class ConformerTTSModel(L.LightningModule):
 
         self.log_dict({
             "val/mel_loss": l_mel,
-        #     "train/pitch_loss": l_pitch,
-        #     "train/energy_loss": l_energy,
-        #     "train/total_loss": l_mel + l_pitch + l_energy
         })
         
         return l_mel
@@ -178,9 +177,6 @@ class ConformerTTSModel(L.LightningModule):
 
         self.log_dict({
             "test/mel_loss": l_mel,
-        #     "train/pitch_loss": l_pitch,
-        #     "train/energy_loss": l_energy,
-        #     "train/total_loss": l_mel + l_pitch + l_energy
         })
         
         return l_mel
@@ -191,11 +187,20 @@ class ConformerTTSModel(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),
                                       lr=self.lr)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer,
-            patience=2,
-            factor=0.5
-        )
+        
+        if self.lr_scheduler == 'plateau':
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer=optimizer,
+                patience=2,
+                factor=0.5
+            )
+        elif self.lr_scheduler == 'noam':
+            schedule_fn = lambda s: \
+                (self.model_size ** -0.5) * \
+                    min((s + 1) ** -0.5, \
+                        (s + 1) * self.warm_up_steps ** -1.5)
+            lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optimizer,
+                                                             lr_lambda=schedule_fn)
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
                 "monitor": "val/mel_loss"}
