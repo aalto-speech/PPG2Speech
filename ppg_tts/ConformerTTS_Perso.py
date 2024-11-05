@@ -195,4 +195,4 @@ class ConformerTTSModel(L.LightningModule):
         )
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
-                "monitor": "val/total_loss"}
+                "monitor": "val/mel_loss"}
