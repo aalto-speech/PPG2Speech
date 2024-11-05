@@ -104,7 +104,7 @@ class TestPersoCollateFn(unittest.TestCase):
         np.testing.assert_allclose(ref_length, self.batch_dict["energy_len"].numpy())
 
     def testVFlag(self):
-        self.assertTupleEqual(self.batch_dict["energy"].shape, (4, 13))
+        self.assertTupleEqual(self.batch_dict["v_flag"].shape, (4, 13))
 
 if __name__ == "__main__":
     TestPersoCollateFn.run()

@@ -32,7 +32,7 @@ class ConformerTTS(nn.Module):
                                  out_features=encode_dim,
                                  bias=True)
         
-        self.pred_net = nn.Linear(in_features=encode_dim,
+        self.pred_net = nn.Linear(in_features=encode_dim * 2,
                                   out_features=target_dim)
         
         self.spk_emb_enc = SpeakerEmbeddingEncoder(input_size=spk_emb_size,
@@ -60,10 +60,10 @@ class ConformerTTS(nn.Module):
                                            depthwise_conv_kernel_size=encode_kernel_size,
                                            dropout=dropout)
             
-            self.conformer_dec = Conformer(input_dim=encode_dim,
+            self.conformer_dec = Conformer(input_dim=encode_dim * 2,
                                            num_heads=num_heads,
                                            num_layers=num_layers,
-                                           ffn_dim=encode_ffn_dim,
+                                           ffn_dim=encode_ffn_dim * 2,
                                            depthwise_conv_kernel_size=encode_kernel_size,
                                            dropout=dropout)
         else:
@@ -118,7 +118,11 @@ class ConformerTTS(nn.Module):
         # z, predicted_pitch, predicted_energy = \
         #     self.variance_adapter(z, mel_mask, pitch_target, energy_target)
         
-        z = z + encoded_spk_emb.unsqueeze(1)
+        z = torch.cat([
+            z,
+            encoded_spk_emb.unsqueeze(1).repeat(1, z.size(1), 1)
+            ],
+            dim=-1)
         
         z, z_length = self.conformer_dec(z, z_length)
         

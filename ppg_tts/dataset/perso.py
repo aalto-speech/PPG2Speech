@@ -153,4 +153,4 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
             "energy": energy_batch.float(),
             "energy_mask": energy_mask,
             "energy_len": energy_length,
-            "vflag": vflag_batch}
+            "v_flag": vflag_batch}
