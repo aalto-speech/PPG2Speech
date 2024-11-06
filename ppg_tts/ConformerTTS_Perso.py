@@ -4,6 +4,7 @@ import torch
 from pathlib import Path
 from .models import ConformerTTS
 from torch.utils.data.dataloader import DataLoader
+from torch.optim import lr_scheduler as LRScheduler
 from .dataset import PersoDatasetWithConditions, PersoCollateFn
 
 class PersoDataModule(L.LightningDataModule):
@@ -68,11 +69,21 @@ class ConformerTTSModel(L.LightningModule):
                  spk_emb_size: int,
                  emb_hidden_size: int,
                  dropout: float=0.1,
-                 target_dim:int=80,
-                 backend: str="torchaudio",):
+                 target_dim: int=80,
+                 backend: str="torchaudio",
+                 lr: float=1e-4,
+                 lr_scheduler: str="plateau",
+                 warm_up_steps: int=25000,
+                 gamma: float=0.95):
         super().__init__()
 
         self.save_hyperparameters()
+
+        self.lr = lr
+        self.lr_scheduler = lr_scheduler
+        self.warm_up_steps = warm_up_steps
+        self.model_size = encode_ffn_dim
+        self.gamma = gamma
 
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
@@ -103,93 +114,99 @@ class ConformerTTSModel(L.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        import pdb
-        pdb.set_trace()
-        pred_mel, pred_pitch, pred_energy = self.model.forward(
+        # import pdb
+        # pdb.set_trace()
+        pred_mel = self.model.forward(
             batch["ppg"],
             batch["ppg_len"],
             batch["spk_emb"],
             batch["log_F0"],
-            batch["energy"],
+            batch["v_flag"],
             batch["energy_len"],
             batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
-        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
-        l_energy = self.energy_loss(pred_energy, batch["energy"])
+        # l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        # l_energy = self.energy_loss(pred_energy, batch["energy"])
 
-        total = l_mel + l_pitch + l_energy
+        # total = l_mel + l_pitch + l_energy
 
         self.log_dict({
             "train/mel_loss": l_mel,
-            "train/pitch_loss": l_pitch,
-            "train/energy_loss": l_energy,
-            "train/total_loss": l_mel + l_pitch + l_energy})
+        })
         
-        return total
+        return l_mel
 
     def validation_step(self, batch, batch_idx):
-        pred_mel, pred_pitch, pred_energy = self.model.forward(
-            x=batch["ppg"],
-            x_length=batch["ppg_len"],
-            spk_emb=batch["spk_emb"],
-            energy_length=batch["energy_len"],
-            mel_mask=batch["mel_mask"],
-            pitch_target=None,
-            energy_target=None,
+        pred_mel = self.model.forward(
+            batch["ppg"],
+            batch["ppg_len"],
+            batch["spk_emb"],
+            batch["log_F0"],
+            batch["v_flag"],
+            batch["energy_len"],
+            batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
-        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
-        l_energy = self.energy_loss(pred_energy, batch["energy"])
+        # l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        # l_energy = self.energy_loss(pred_energy, batch["energy"])
 
-        total = l_mel + l_pitch + l_energy
+        # total = l_mel + l_pitch + l_energy
 
         self.log_dict({
             "val/mel_loss": l_mel,
-            "val/pitch_loss": l_pitch,
-            "val/energy_loss": l_energy,
-            "val/total_loss": l_mel + l_pitch + l_energy})
+        })
         
-        return total
+        return l_mel
 
     def test_step(self, batch, batch_idx):
-        pred_mel, pred_pitch, pred_energy = self.model.forward(
-            x=batch["ppg"],
-            x_length=batch["ppg_len"],
-            spk_emb=batch["spk_emb"],
-            energy_length=batch["energy_len"],
-            mel_mask=batch["mel_mask"],
-            pitch_target=None,
-            energy_target=None,
+        pred_mel = self.model.forward(
+            batch["ppg"],
+            batch["ppg_len"],
+            batch["spk_emb"],
+            batch["log_F0"],
+            batch["v_flag"],
+            batch["energy_len"],
+            batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
-        l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
-        l_energy = self.energy_loss(pred_energy, batch["energy"])
+        # l_pitch = self.pitch_loss(pred_pitch, batch["log_F0"])
+        # l_energy = self.energy_loss(pred_energy, batch["energy"])
 
-        total = l_mel + l_pitch + l_energy
+        # total = l_mel + l_pitch + l_energy
 
         self.log_dict({
             "test/mel_loss": l_mel,
-            "test/pitch_loss": l_pitch,
-            "test/energy_loss": l_energy,
-            "test/total_loss": l_mel + l_pitch + l_energy})
+        })
         
-        return total
+        return l_mel
 
     def predict_step(self, batch, batch_idx):
         raise NotImplementedError("Not implementation for prediction yet. Need Vocoder.")
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),
-                                      lr=4)
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer,
-            patience=2,
-            factor=0.5
-        )
+                                      lr=self.lr)
+        
+        if self.lr_scheduler == 'plateau':
+            lr_scheduler = LRScheduler.ReduceLROnPlateau(
+                optimizer=optimizer,
+                patience=2,
+                factor=0.5
+            )
+        elif self.lr_scheduler == 'noam':
+            schedule_fn = lambda s: \
+                (self.model_size ** -0.5) * \
+                    min((s + 1) ** -0.5, \
+                        (s + 1) * self.warm_up_steps ** -1.5)
+            lr_scheduler = LRScheduler.LambdaLR(optimizer=optimizer,
+                                                 lr_lambda=schedule_fn)
+        elif self.lr_scheduler == 'exponential':
+            lr_scheduler = LRScheduler.ExponentialLR(optimizer=optimizer,
+                                                      gamma=self.gamma)
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
-                "monitor": "val/total_loss"}
+                "monitor": "val/mel_loss"}

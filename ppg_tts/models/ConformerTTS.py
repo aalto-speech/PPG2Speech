@@ -28,11 +28,11 @@ class ConformerTTS(nn.Module):
                  backend: str="torchaudio"):
         super(ConformerTTS, self).__init__()
 
-        self.pre_net = nn.Linear(in_features=ppg_dim,
+        self.pre_net = nn.Linear(in_features=ppg_dim+2,
                                  out_features=encode_dim,
                                  bias=True)
         
-        self.pred_net = nn.Linear(in_features=encode_dim,
+        self.pred_net = nn.Linear(in_features=encode_dim * 2,
                                   out_features=target_dim)
         
         self.spk_emb_enc = SpeakerEmbeddingEncoder(input_size=spk_emb_size,
@@ -60,10 +60,10 @@ class ConformerTTS(nn.Module):
                                            depthwise_conv_kernel_size=encode_kernel_size,
                                            dropout=dropout)
             
-            self.conformer_dec = Conformer(input_dim=encode_dim,
+            self.conformer_dec = Conformer(input_dim=encode_dim * 2,
                                            num_heads=num_heads,
                                            num_layers=num_layers,
-                                           ffn_dim=encode_ffn_dim,
+                                           ffn_dim=encode_ffn_dim * 2,
                                            depthwise_conv_kernel_size=encode_kernel_size,
                                            dropout=dropout)
         else:
@@ -84,8 +84,8 @@ class ConformerTTS(nn.Module):
                 x: torch.Tensor,
                 x_length: torch.Tensor,
                 spk_emb: torch.Tensor,
-                pitch_target: torch.Tensor | None,
-                energy_target: torch.Tensor | None,
+                pitch_target: torch.Tensor,
+                v_flag: torch.Tensor,
                 energy_length: torch.Tensor,
                 mel_mask: torch.Tensor):
         """
@@ -93,29 +93,40 @@ class ConformerTTS(nn.Module):
             x: input PPG, shape (B, T_ppg, E)
             spk_emb: speaker_embedding, shape (B, E_spk)
             pitch_target: shape (B, T_mel)
-            energy_target: shape (B, T_mel)
+            v_flag: shape (B, T_mel)
+            energy_length: shape (B,)
             mel_mask: shape (B, T_mel)
         Returns:
             prediected_mel: shape (B, T, 80)
             predicted_pitch: shape (B, T_mel)
             predicted_energy: shape (B, T_mel)
-        """
+        """        
         T_mel = mel_mask.size(1)
         x = self._interpolate(x, T_mel)
-
+        
+        x = torch.cat([x,
+                       pitch_target.unsqueeze(-1),
+                       v_flag.unsqueeze(-1)
+                       ],
+                      dim=-1)
+        
         encoded_spk_emb = self.spk_emb_enc(spk_emb)
-
+        
         z = self.pre_net(x)
-
+        
         z, z_length = self.conformer_enc(z, energy_length)
-
-        z, predicted_pitch, predicted_energy = \
-            self.variance_adapter(z, mel_mask, pitch_target, energy_target)
-
-        z = z + encoded_spk_emb.unsqueeze(1)
-
+        
+        # z, predicted_pitch, predicted_energy = \
+        #     self.variance_adapter(z, mel_mask, pitch_target, energy_target)
+        
+        z = torch.cat([
+            z,
+            encoded_spk_emb.unsqueeze(1).repeat(1, z.size(1), 1)
+            ],
+            dim=-1)
+        
         z, z_length = self.conformer_dec(z, z_length)
-
+        
         predicted_mel = self.pred_net(z)
-
-        return predicted_mel, predicted_pitch, predicted_energy
+        
+        return predicted_mel

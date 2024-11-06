@@ -14,4 +14,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device",
                         help="CPU/CUDA device to run",
                         default="cpu")
+    
+    parser.add_argument("--nj",
+                        help="number of jobs in pitch extraction",
+                        default=4)
     return parser

@@ -11,28 +11,32 @@ class TestPersoCollateFn(unittest.TestCase):
                 "ppg": torch.randn((3,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(4),
-                "energy": torch.randn(4)
+                "energy": torch.randn(4),
+                "v_flag": torch.rand(4) > 0.6,
             },
             {
                 "melspectrogram": torch.randn((10,6)),
                 "ppg": torch.randn((4,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(6),
-                "energy": torch.randn(6)
+                "energy": torch.randn(6),
+                "v_flag": torch.rand(6) > 0.6,
             },
             {
                 "melspectrogram": torch.randn((10,9)),
                 "ppg": torch.randn((7,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(9),
-                "energy": torch.randn(9)
+                "energy": torch.randn(9),
+                "v_flag": torch.rand(9) > 0.6,
             },
             {
                 "melspectrogram": torch.randn((10,13)),
                 "ppg": torch.randn((11,20)),
                 "spk_emb": torch.randn(16),
                 "log_F0": torch.randn(13),
-                "energy": torch.randn(13)
+                "energy": torch.randn(13),
+                "v_flag": torch.rand(13) > 0.6,
             },
         ]
 
@@ -99,6 +103,8 @@ class TestPersoCollateFn(unittest.TestCase):
 
         np.testing.assert_allclose(ref_length, self.batch_dict["energy_len"].numpy())
 
+    def testVFlag(self):
+        self.assertTupleEqual(self.batch_dict["v_flag"].shape, (4, 13))
 
 if __name__ == "__main__":
     TestPersoCollateFn.run()
