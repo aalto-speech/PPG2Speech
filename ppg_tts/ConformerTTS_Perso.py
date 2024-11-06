@@ -4,6 +4,7 @@ import torch
 from pathlib import Path
 from .models import ConformerTTS
 from torch.utils.data.dataloader import DataLoader
+from torch.optim import lr_scheduler as LRScheduler
 from .dataset import PersoDatasetWithConditions, PersoCollateFn
 
 class PersoDataModule(L.LightningDataModule):
@@ -191,7 +192,7 @@ class ConformerTTSModel(L.LightningModule):
                                       lr=self.lr)
         
         if self.lr_scheduler == 'plateau':
-            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            lr_scheduler = LRScheduler.ReduceLROnPlateau(
                 optimizer=optimizer,
                 patience=2,
                 factor=0.5
@@ -201,11 +202,11 @@ class ConformerTTSModel(L.LightningModule):
                 (self.model_size ** -0.5) * \
                     min((s + 1) ** -0.5, \
                         (s + 1) * self.warm_up_steps ** -1.5)
-            lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optimizer,
-                                                             lr_lambda=schedule_fn)
+            lr_scheduler = LRScheduler.LambdaLR(optimizer=optimizer,
+                                                 lr_lambda=schedule_fn)
         elif self.lr_scheduler == 'exponential':
-            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer,
-                                                                  gamma=self.gamma)
+            lr_scheduler = LRScheduler.ExponentialLR(optimizer=optimizer,
+                                                      gamma=self.gamma)
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
                 "monitor": "val/mel_loss"}
