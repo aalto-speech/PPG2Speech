@@ -72,7 +72,8 @@ class ConformerTTSModel(L.LightningModule):
                  backend: str="torchaudio",
                  lr: float=1e-4,
                  lr_scheduler: str="plateau",
-                 warm_up_steps: int=25000):
+                 warm_up_steps: int=25000,
+                 gamma: float=0.95):
         super().__init__()
 
         self.save_hyperparameters()
@@ -81,6 +82,7 @@ class ConformerTTSModel(L.LightningModule):
         self.lr_scheduler = lr_scheduler
         self.warm_up_steps = warm_up_steps
         self.model_size = encode_ffn_dim
+        self.gamma = gamma
 
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
@@ -203,7 +205,7 @@ class ConformerTTSModel(L.LightningModule):
                                                              lr_lambda=schedule_fn)
         elif self.lr_scheduler == 'exponential':
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer,
-                                                                  gamma=0.8)
+                                                                  gamma=self.gamma)
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
                 "monitor": "val/mel_loss"}
