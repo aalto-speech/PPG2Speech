@@ -26,3 +26,24 @@ class PPGFromWav2Vec2Pretrained:
     def tokenize(self, target: str):
         encoding = self.processor(text=target)
         return encoding
+    
+class PPGFromWav2Vec2PretrainedNoCTC(PPGFromWav2Vec2Pretrained):
+    def __init__(self, pretrained = "GetmanY1/wav2vec2-large-fi-150k-finetuned", device = 'cpu'):
+        super().__init__(pretrained, device)
+
+        self.model = self._drop_ctc_layer()
+
+    def forward(self, waveform: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            waveform = waveform.to(self.device)
+            logits = self.model(waveform).last_hidden_state
+
+        return logits
+
+    def _drop_ctc_layer(self):
+        logger.info("Drop CTC layer from the model.")
+        keep_layers = list(self.model.children())[:-2]
+
+        new_model = torch.nn.Sequential(*keep_layers)
+
+        return new_model

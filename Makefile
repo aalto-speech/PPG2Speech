@@ -10,7 +10,7 @@ speaker_emb:
 	--auth_token $(auth_token)
 
 ppg:
-	python -m ppg_tts.feature_extract.ppg_extract --data_dir $(data_dir) --device $(device)
+	python -m ppg_tts.feature_extract.ppg_extract --data_dir $(data_dir) --device $(device) --no_ctc
 
 log_f0:
 	python -m ppg_tts.feature_extract.log_f0_extract --data_dir $(data_dir)
