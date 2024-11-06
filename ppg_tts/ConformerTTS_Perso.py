@@ -11,23 +11,22 @@ from .utils import plot_mel
 class PersoDataModule(L.LightningDataModule):
     def __init__(self, 
                  data_dir: str="./data",
-                 batch_size: int=16):
+                 batch_size: int=16,
+                 no_ctc: bool=False):
         super().__init__()
         self.data_dir = data_dir
         self.train_dir = Path(data_dir) / "train"
         self.val_dir = Path(data_dir) / "val"
         self.test_dir = Path(data_dir) / "test"
         self.batch_size = batch_size
+        self.no_ctc = no_ctc
 
-    # def prepare_data(self):
-    #     raise NotImplementedError("Please use ./scripts/perso_data.sh for data preparation.")
-    
     def setup(self, stage: str):
         if stage == 'fit':
-            self.train = PersoDatasetWithConditions(self.train_dir)
-            self.val = PersoDatasetWithConditions(self.val_dir)
+            self.train = PersoDatasetWithConditions(self.train_dir, self.no_ctc)
+            self.val = PersoDatasetWithConditions(self.val_dir, self.no_ctc)
         elif stage == 'test' or stage == 'predict':
-            self.test = PersoDatasetWithConditions(self.test_dir)
+            self.test = PersoDatasetWithConditions(self.test_dir, self.no_ctc)
 
     def train_dataloader(self):
         return DataLoader(self.train,

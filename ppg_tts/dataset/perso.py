@@ -48,9 +48,12 @@ class PersoDatasetBasic(Dataset):
     
 
 class PersoDatasetWithConditions(PersoDatasetBasic):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, no_ctc: bool=False):
         super().__init__(data_dir)
-        self.ppg_path = Path(data_dir, "ppg.scp")
+        if no_ctc:
+            self.ppg_path = Path(data_dir, "ppg_no_ctc.scp")
+        else:
+            self.ppg_path = Path(data_dir, "ppg.scp")
         self.spk_emb_path = Path(data_dir, "embedding.scp")
         self.log_F0_path = Path(data_dir, "log_f0.scp")
         self.v_flag = Path(data_dir, "voiced.scp")
