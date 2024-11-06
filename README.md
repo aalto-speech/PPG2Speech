@@ -42,3 +42,9 @@ Ready to build Conformer TTS model.
 ## 2024.11.01
 
 Training, Validation, Testing loop done. Can proceed to training.
+
+## 2024.11.06
+
+1. Use w2v2 representations to train a model.
+2. Plot generated mel
+3. set up vocoder (starts with universal w/o fine-tuning)
