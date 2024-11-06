@@ -10,6 +10,7 @@ trainer:
     class_path: lightning.pytorch.loggers.WandbLogger
     init_args:
       project: "PPG_TTS_Conformer"
+      name: 
       save_dir: "./logs/"
   callbacks:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor

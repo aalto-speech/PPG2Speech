@@ -201,6 +201,9 @@ class ConformerTTSModel(L.LightningModule):
                         (s + 1) * self.warm_up_steps ** -1.5)
             lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optimizer,
                                                              lr_lambda=schedule_fn)
+        elif self.lr_scheduler == 'exponential':
+            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer,
+                                                                  gamma=0.8)
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
                 "monitor": "val/mel_loss"}
