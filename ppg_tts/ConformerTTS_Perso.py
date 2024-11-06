@@ -75,7 +75,8 @@ class ConformerTTSModel(L.LightningModule):
                  lr: float=1e-4,
                  lr_scheduler: str="plateau",
                  warm_up_steps: int=25000,
-                 gamma: float=0.95):
+                 gamma: float=0.95,
+                 no_ctc: bool=False):
         super().__init__()
 
         self.save_hyperparameters()
@@ -85,6 +86,7 @@ class ConformerTTSModel(L.LightningModule):
         self.warm_up_steps = warm_up_steps
         self.model_size = encode_ffn_dim
         self.gamma = gamma
+        self.no_ctc = no_ctc
 
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
@@ -112,6 +114,7 @@ class ConformerTTSModel(L.LightningModule):
             energy_max=stats['energy_max'],
             pitch_min=stats['pitch_min'],
             pitch_max=stats['pitch_max'],
+            no_ctc=self.no_ctc,
         )
 
     def training_step(self, batch, batch_idx):

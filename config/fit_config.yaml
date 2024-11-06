@@ -83,6 +83,7 @@ model:
   lr_scheduler: plateau
   warm_up_steps: 25000
   gamma: 0.95
+  no_ctc: False
 data:
   data_dir: ./data
   batch_size: 16
