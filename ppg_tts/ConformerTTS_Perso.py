@@ -6,6 +6,7 @@ from .models import ConformerTTS
 from torch.utils.data.dataloader import DataLoader
 from torch.optim import lr_scheduler as LRScheduler
 from .dataset import PersoDatasetWithConditions, PersoCollateFn
+from .utils import plot_mel
 
 class PersoDataModule(L.LightningDataModule):
     def __init__(self, 
@@ -181,6 +182,13 @@ class ConformerTTSModel(L.LightningModule):
         self.log_dict({
             "test/mel_loss": l_mel,
         })
+
+        if batch_idx % 10 == 0:
+            mel_figures_path = self.logger.save_dir + "/mel_samples"
+
+            saved_mel = pred_mel[0].numpy()
+
+            plot_mel(saved_mel, path=mel_figures_path, key=batch['key'])
         
         return l_mel
 
