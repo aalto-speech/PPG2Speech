@@ -186,9 +186,9 @@ class ConformerTTSModel(L.LightningModule):
         if batch_idx % 10 == 0:
             mel_figures_path = self.logger.save_dir + "/mel_samples"
 
-            saved_mel = pred_mel[0].numpy()
+            saved_mel = pred_mel[-1].detach().cpu().numpy()
 
-            plot_mel(saved_mel, path=mel_figures_path, key=batch['key'])
+            plot_mel(saved_mel, path=mel_figures_path, key=batch['keys'][-1])
         
         return l_mel
 
@@ -218,3 +218,6 @@ class ConformerTTSModel(L.LightningModule):
         return {"optimizer": optimizer,
                 "lr_scheduler": lr_scheduler,
                 "monitor": "val/mel_loss"}
+    
+    def on_fit_end(self):
+        self.trainer.test(ckpt_path='best', dataloaders=self.trainer.test_dataloaders)

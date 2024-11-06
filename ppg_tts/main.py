@@ -7,9 +7,6 @@ def cli_main():
     cli = LightningCLI(ConformerTTSModel,
                        PersoDataModule,
                        save_config_kwargs={"overwrite": True})
-    
-    cli.trainer.test(ckpt_path="best",
-                     datamodule=cli.datamodule)
 
 if __name__ == "__main__":
     seed_everything(17, workers=True)
