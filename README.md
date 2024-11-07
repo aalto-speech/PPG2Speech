@@ -45,6 +45,12 @@ Training, Validation, Testing loop done. Can proceed to training.
 
 ## 2024.11.06
 
-- [ ] Use w2v2 representations to train a model.
+- [x] Use w2v2 representations to train a model.
 - [x] Plot generated mel
-- [ ] set up vocoder (starts with universal w/o fine-tuning)
+- [x] set up vocoder (starts with universal w/o fine-tuning)
+
+## 2024.11.07
+- [ ] Check vocoder write to wav setting
+- [ ] Testing and running prediction step.
+- [ ] Interating hifi-gan to this project.
+
