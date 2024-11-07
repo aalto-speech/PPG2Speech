@@ -21,5 +21,5 @@ def plot_mel(mel: np.ndarray, path: str, key: str):
     plt.xlabel("Time")
     plt.ylabel("Mel Frequency")
 
-    plt.savefig(f"{path}/{key}.png", format="png", dpi=600, bbox_inches="tight")
+    plt.savefig(f"{path}/{key}.png", format="png", dpi=300, bbox_inches="tight")
     plt.close() 
