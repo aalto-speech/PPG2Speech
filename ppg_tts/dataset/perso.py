@@ -134,7 +134,7 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
 
         mask = lengths <= max_len_range
 
-        return batch_tensor, mask, lengths.squeeze()
+        return batch_tensor, mask, lengths.squeeze(1)
 
     mel_batch, mel_mask, _ = _pad_and_batch("melspectrogram")
     ppg_batch, ppg_mask, ppg_length = _pad_and_batch("ppg")

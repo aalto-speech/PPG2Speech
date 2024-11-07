@@ -214,8 +214,9 @@ class ConformerTTSModel(L.LightningModule):
         if not os.path.exists(mel_save_dir):
             os.makedirs(mel_save_dir)
 
-        np.save(f"{mel_save_dir}/{batch['key']}.npy", saved_mel)
+        np.save(f"{mel_save_dir}/{batch['keys'][0]}.npy", saved_mel)
 
+        return pred_mel
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),

@@ -50,7 +50,7 @@ Training, Validation, Testing loop done. Can proceed to training.
 - [x] set up vocoder (starts with universal w/o fine-tuning)
 
 ## 2024.11.07
-- [ ] Check vocoder write to wav setting
-- [ ] Testing and running prediction step.
+- [ ] Check vocoder works correct with English
+- [x] Testing and running prediction step.
 - [ ] Interating hifi-gan to this project.
 
