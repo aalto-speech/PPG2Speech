@@ -1,6 +1,12 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pytorch_lightning as pl
+
+class RunTestOnFitEndCallback(pl.Callback):
+    def on_fit_end(self, trainer, pl_module):
+        trainer.test(ckpt_path='best',
+                     datamodule=trainer.datamodule)
 
 def plot_mel(mel: np.ndarray, path: str, key: str):
     if not os.path.exists(path):

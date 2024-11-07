@@ -222,4 +222,6 @@ class ConformerTTSModel(L.LightningModule):
                 "monitor": "val/mel_loss"}
     
     def on_fit_end(self):
-        self.trainer.test(ckpt_path='best', dataloaders=self.trainer.test_dataloaders)
+        self.trainer.test(ckpt_path='best',
+                          datamodule=self.trainer.datamodule)
+

@@ -111,9 +111,9 @@ class ConformerTTS(nn.Module):
         x = self._interpolate(x, T_mel)
 
         if self.no_ctc:
-            x = x.permute(1, 2)
+            x = x.transpose(1, 2)
             x = self.pre_conv(x)
-            x.permute(1,2)
+            x = x.transpose(1,2)
         
         x = torch.cat([x,
                        pitch_target.unsqueeze(-1),
