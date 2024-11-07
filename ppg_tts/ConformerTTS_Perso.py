@@ -1,4 +1,6 @@
 import json
+import numpy as np
+import os
 import lightning as L
 import torch
 from pathlib import Path
@@ -42,8 +44,7 @@ class PersoDataModule(L.LightningDataModule):
     
     def test_dataloader(self):
         return DataLoader(self.test,
-                          batch_size=self.batch_size,
-                          num_workers=8,
+                          batch_size=1,
                           collate_fn=PersoCollateFn)
     
     def predict_dataloader(self):
@@ -195,7 +196,26 @@ class ConformerTTSModel(L.LightningModule):
         return l_mel
 
     def predict_step(self, batch, batch_idx):
-        raise NotImplementedError("Not implementation for prediction yet. Need Vocoder.")
+        with torch.no_grad():
+            pred_mel = self.model.forward(
+                batch["ppg"],
+                batch["ppg_len"],
+                batch["spk_emb"],
+                batch["log_F0"],
+                batch["v_flag"],
+                batch["energy_len"],
+                batch["mel_mask"]
+            )
+
+        saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
+
+        mel_save_dir = self.logger.save_dir + "/generated_mel"
+
+        if not os.path.exists(mel_save_dir):
+            os.makedirs(mel_save_dir)
+
+        np.save(f"{mel_save_dir}/{batch['key']}.npy", saved_mel)
+
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),
