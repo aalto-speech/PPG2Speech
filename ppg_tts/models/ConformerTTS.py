@@ -25,8 +25,14 @@ class ConformerTTS(nn.Module):
                  emb_hidden_size: int,
                  dropout: float=0.1,
                  target_dim:int=80,
-                 backend: str="torchaudio"):
+                 backend: str="torchaudio",
+                 no_ctc: bool=False):
         super(ConformerTTS, self).__init__()
+
+        self.no_ctc = no_ctc
+
+        if no_ctc:
+            self.pre_conv = nn.Conv1d(1024, ppg_dim, kernel_size=1)
 
         self.pre_net = nn.Linear(in_features=ppg_dim+2,
                                  out_features=encode_dim,
@@ -103,6 +109,11 @@ class ConformerTTS(nn.Module):
         """        
         T_mel = mel_mask.size(1)
         x = self._interpolate(x, T_mel)
+
+        if self.no_ctc:
+            x = x.transpose(1, 2)
+            x = self.pre_conv(x)
+            x = x.transpose(1,2)
         
         x = torch.cat([x,
                        pitch_target.unsqueeze(-1),

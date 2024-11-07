@@ -1,4 +1,6 @@
 import json
+import numpy as np
+import os
 import lightning as L
 import torch
 from pathlib import Path
@@ -11,23 +13,22 @@ from .utils import plot_mel
 class PersoDataModule(L.LightningDataModule):
     def __init__(self, 
                  data_dir: str="./data",
-                 batch_size: int=16):
+                 batch_size: int=16,
+                 no_ctc: bool=False):
         super().__init__()
         self.data_dir = data_dir
         self.train_dir = Path(data_dir) / "train"
         self.val_dir = Path(data_dir) / "val"
         self.test_dir = Path(data_dir) / "test"
         self.batch_size = batch_size
+        self.no_ctc = no_ctc
 
-    # def prepare_data(self):
-    #     raise NotImplementedError("Please use ./scripts/perso_data.sh for data preparation.")
-    
     def setup(self, stage: str):
         if stage == 'fit':
-            self.train = PersoDatasetWithConditions(self.train_dir)
-            self.val = PersoDatasetWithConditions(self.val_dir)
+            self.train = PersoDatasetWithConditions(self.train_dir, self.no_ctc)
+            self.val = PersoDatasetWithConditions(self.val_dir, self.no_ctc)
         elif stage == 'test' or stage == 'predict':
-            self.test = PersoDatasetWithConditions(self.test_dir)
+            self.test = PersoDatasetWithConditions(self.test_dir, self.no_ctc)
 
     def train_dataloader(self):
         return DataLoader(self.train,
@@ -43,8 +44,7 @@ class PersoDataModule(L.LightningDataModule):
     
     def test_dataloader(self):
         return DataLoader(self.test,
-                          batch_size=self.batch_size,
-                          num_workers=8,
+                          batch_size=1,
                           collate_fn=PersoCollateFn)
     
     def predict_dataloader(self):
@@ -75,7 +75,8 @@ class ConformerTTSModel(L.LightningModule):
                  lr: float=1e-4,
                  lr_scheduler: str="plateau",
                  warm_up_steps: int=25000,
-                 gamma: float=0.95):
+                 gamma: float=0.95,
+                 no_ctc: bool=False):
         super().__init__()
 
         self.save_hyperparameters()
@@ -85,6 +86,7 @@ class ConformerTTSModel(L.LightningModule):
         self.warm_up_steps = warm_up_steps
         self.model_size = encode_ffn_dim
         self.gamma = gamma
+        self.no_ctc = no_ctc
 
         self.mel_loss = mel_loss
         self.energy_loss = energy_loss
@@ -112,6 +114,7 @@ class ConformerTTSModel(L.LightningModule):
             energy_max=stats['energy_max'],
             pitch_min=stats['pitch_min'],
             pitch_max=stats['pitch_max'],
+            no_ctc=self.no_ctc,
         )
 
     def training_step(self, batch, batch_idx):
@@ -193,7 +196,27 @@ class ConformerTTSModel(L.LightningModule):
         return l_mel
 
     def predict_step(self, batch, batch_idx):
-        raise NotImplementedError("Not implementation for prediction yet. Need Vocoder.")
+        with torch.no_grad():
+            pred_mel = self.model.forward(
+                batch["ppg"],
+                batch["ppg_len"],
+                batch["spk_emb"],
+                batch["log_F0"],
+                batch["v_flag"],
+                batch["energy_len"],
+                batch["mel_mask"]
+            )
+
+        saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
+
+        mel_save_dir = self.logger.save_dir + "/generated_mel"
+
+        if not os.path.exists(mel_save_dir):
+            os.makedirs(mel_save_dir)
+
+        np.save(f"{mel_save_dir}/{batch['keys'][0]}.npy", saved_mel)
+
+        return pred_mel
     
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(),
@@ -220,4 +243,6 @@ class ConformerTTSModel(L.LightningModule):
                 "monitor": "val/mel_loss"}
     
     def on_fit_end(self):
-        self.trainer.test(ckpt_path='best', dataloaders=self.trainer.test_dataloaders)
+        self.trainer.test(ckpt_path='best',
+                          datamodule=self.trainer.datamodule)
+
