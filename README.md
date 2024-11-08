@@ -50,7 +50,9 @@ Training, Validation, Testing loop done. Can proceed to training.
 - [x] set up vocoder (starts with universal w/o fine-tuning)
 
 ## 2024.11.07
-- [ ] Check vocoder works correct with English
+- [x] Check vocoder works correct with English
 - [x] Testing and running prediction step.
 - [x] Interating hifi-gan to this project.
 
+## 2024.11.08
+- [ ] integrate [BigVGAN](https://huggingface.co/nvidia/bigvgan_v2_22khz_80band_fmax8k_256x)
