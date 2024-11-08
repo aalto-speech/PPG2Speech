@@ -77,18 +77,18 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         waveform = self.resampler(waveform)
 
         mel = mel_spectogram(sample_rate=22050,
-                            n_fft=1024,
-                            win_length=1024,
-                            hop_length=256,
-                            f_min=125,
-                            f_max=7600,
-                            n_mels=80,
-                            normalized=True,
-                            compression=True,
-                            audio=waveform,
-                            power=2,
-                            norm=None,
-                            mel_scale='htk')
+                             n_fft=1024,
+                             win_length=1024,
+                             hop_length=256,
+                             f_min=0,
+                             f_max=8000,
+                             n_mels=80,
+                             normalized=False,
+                             compression=True,
+                             audio=waveform,
+                             power=2,
+                             norm="slaney",
+                             mel_scale="slaney")
         
         energy = torch.sqrt(torch.sum(mel ** 2, dim=1))
 
