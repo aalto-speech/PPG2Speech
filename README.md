@@ -55,4 +55,6 @@ Training, Validation, Testing loop done. Can proceed to training.
 - [x] Interating hifi-gan to this project.
 
 ## 2024.11.08
-- [ ] integrate [BigVGAN](https://huggingface.co/nvidia/bigvgan_v2_22khz_80band_fmax8k_256x)
+- [ ] integrate [BigVGAN](https://version.aalto.fi/gitlab/liz32/bigvgan_v2_22khz_80band_fmax8k_256x)
+
+put BigVGAN in a separate folder. cd to that folder when inference. They can run in the same conda environment.
