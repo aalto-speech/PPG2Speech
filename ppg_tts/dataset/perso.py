@@ -4,7 +4,7 @@ from loguru import logger
 from pathlib import Path
 from torch.nn.utils.rnn import pad_sequence
 from torchaudio.transforms import Resample
-from speechbrain.lobes.models.HifiGAN import mel_spectogram
+from vocoder.bigvgan.meldataset import mel_spectrogram
 from typing import Tuple, Dict, List
 from torch.utils.data import Dataset
 from kaldiio import ReadHelper
@@ -75,20 +75,15 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         waveform, _ = torchaudio.load(wav)
         
         waveform = self.resampler(waveform)
-
-        mel = mel_spectogram(sample_rate=22050,
-                             n_fft=1024,
-                             win_length=1024,
-                             hop_length=256,
-                             f_min=0,
-                             f_max=8000,
-                             n_mels=80,
-                             normalized=False,
-                             compression=True,
-                             audio=waveform,
-                             power=2,
-                             norm="slaney",
-                             mel_scale="slaney")
+        
+        mel = mel_spectrogram(y=waveform,
+                              n_fft=1024,
+                              num_mels=80,
+                              sampling_rate=22050,
+                              hop_size=256,
+                              win_size=1024,
+                              fmin=0,
+                              f_max=8000)
         
         energy = torch.sqrt(torch.sum(mel ** 2, dim=1))
 
