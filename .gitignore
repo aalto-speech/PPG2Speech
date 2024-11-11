@@ -5,6 +5,7 @@ sbatch_logs/
 logs/
 exp*/
 vocoder/hifigan/ckpt/
+inspect_vocoder/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
