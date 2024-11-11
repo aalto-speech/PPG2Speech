@@ -4,6 +4,9 @@ import torchaudio
 import numpy as np
 from speechbrain.lobes.models.HifiGAN import mel_spectogram
 from torchaudio.transforms import Resample
+import sys
+sys.path.append("/scratch/work/liz32/bigvgan/")
+from meldataset import mel_spectrogram
 
 audio_samples = [
     "/scratch/elec/t405-puhe/c/perso_synteesi/male/02m/wav/02m_test_0001.wav",
@@ -18,6 +21,7 @@ save_dir = "/scratch/work/liz32/ppg_tts/inspect_vocoder"
 
 os.makedirs(f"{save_dir}", exist_ok=True)
 os.makedirs(f"{save_dir}/mel", exist_ok=True)
+os.makedirs(f"{save_dir}/mel2", exist_ok=True)
 os.makedirs(f"{save_dir}/audio", exist_ok=True)
 
 resampler = Resample(orig_freq=44100, new_freq=22050)
@@ -43,3 +47,16 @@ for sample in audio_samples:
                          mel_scale="slaney")
     
     np.save(f"{save_dir}/mel/{name}", mel.cpu().numpy())
+
+    mel2 = mel_spectrogram(
+        y=x,
+        n_fft=1024,
+        num_mels=80,
+        sampling_rate=22050,
+        hop_size=256,
+        win_size=1024,
+        fmin=0,
+        fmax=8000,
+    )
+
+    np.save(f"{save_dir}/mel2/{name}", mel2.cpu().numpy())
