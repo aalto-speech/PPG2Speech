@@ -22,6 +22,7 @@ save_dir = "/scratch/work/liz32/ppg_tts/inspect_vocoder"
 os.makedirs(f"{save_dir}", exist_ok=True)
 os.makedirs(f"{save_dir}/mel", exist_ok=True)
 os.makedirs(f"{save_dir}/mel2", exist_ok=True)
+os.makedirs(f"{save_dir}/mel3", exist_ok=True)
 os.makedirs(f"{save_dir}/audio", exist_ok=True)
 
 resampler = Resample(orig_freq=44100, new_freq=22050)
@@ -60,3 +61,19 @@ for sample in audio_samples:
     )
 
     np.save(f"{save_dir}/mel2/{name}", mel2.cpu().numpy())
+
+    mel3 = mel_spectogram(sample_rate=22050,
+                         n_fft=1024,
+                         win_length=1024,
+                         hop_length=256,
+                         f_min=0,
+                         f_max=8000,
+                         n_mels=80,
+                         normalized=False,
+                         compression=True,
+                         audio=x,
+                         power=1,
+                         norm="slaney",
+                         mel_scale="slaney")
+    
+    np.save(f"{save_dir}/mel3/{name}", mel3.cpu().numpy())

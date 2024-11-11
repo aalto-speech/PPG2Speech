@@ -76,21 +76,37 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         
         waveform = self.resampler(waveform)
 
-        mel = mel_spectogram(sample_rate=22050,
-                             n_fft=1024,
-                             win_length=1024,
-                             hop_length=256,
-                             f_min=0,
-                             f_max=8000,
-                             n_mels=80,
-                             normalized=False,
-                             compression=True,
-                             audio=waveform,
-                             power=2,
-                             norm="slaney",
-                             mel_scale="slaney")
+        mel = mel_spectogram(
+            sample_rate=22050,
+            n_fft=1024,
+            win_length=1024,
+            hop_length=256,
+            f_min=0,
+            f_max=8000,
+            n_mels=80,
+            normalized=False,
+            compression=True,
+            audio=waveform,
+            power=1,
+            norm="slaney",
+            mel_scale="slaney"
+        )
         
-        energy = torch.sqrt(torch.sum(mel ** 2, dim=1))
+        energy = mel_spectogram(
+            sample_rate=22050,
+            n_fft=1024,
+            win_length=1024,
+            hop_length=256,
+            f_min=0,
+            f_max=8000,
+            n_mels=80,
+            normalized=False,
+            compression=True,
+            audio=waveform,
+            power=2,
+            norm="slaney",
+            mel_scale="slaney"
+        )
 
         return {"key": key,
                 "feature": waveform,
@@ -118,7 +134,7 @@ def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
     def _pad_and_batch(key: str):
         items = [d[key].squeeze() for d in batch_lst]
 
-        if key == "melspectrogram":
+        if key == "melspectrogram" or key == "energy":
             items = [item.transpose(0, 1) for item in items]
 
         if key == "v_flag":
