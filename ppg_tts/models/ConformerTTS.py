@@ -83,7 +83,10 @@ class ConformerTTS(nn.Module):
                      target_length: int) -> torch.Tensor:
         x = x.permute(0, 2, 1).unsqueeze(-1)
 
-        x_interpolated = interpolate(x, size=(target_length, 1), mode='bilinear', align_corners=True)
+        x_interpolated = interpolate(x, 
+                                     size=(target_length, 1), 
+                                     mode='bilinear', 
+                                     align_corners=True)
 
         x_interpolated = x_interpolated.squeeze(-1).permute(0, 2, 1)
 
