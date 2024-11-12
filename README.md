@@ -58,3 +58,8 @@ Training, Validation, Testing loop done. Can proceed to training.
 - [x] integrate [BigVGAN](https://version.aalto.fi/gitlab/liz32/bigvgan_v2_22khz_80band_fmax8k_256x)
 
 Put BigVGAN in a separate folder and soft link it back to vocoder folder.
+
+## 2024.11.12
+Add following modules for better mel:
+- [ ] postnet like Tacotron 2 (https://speechbrain.readthedocs.io/en/latest/API/speechbrain.lobes.models.Tacotron2.html#speechbrain.lobes.models.Tacotron2.Postnet)
+- [ ] adversarial training, train mel classifier after mel generator converges
