@@ -15,7 +15,7 @@ def plot_mel(mel: np.ndarray, path: str, key: str):
     np.save(f"{path}/{key}", mel)
 
     plt.figure(figsize=(10, 4))
-    plt.imshow(mel.T, aspect="auto", origin="lower", cmap="magma",
+    plt.imshow(mel[0], aspect="auto", origin="lower", cmap="magma",
                extent=[0, mel.shape[0], 0, mel.shape[1]])
     plt.title(f"Predicted Mel Spectrogram for {key}")
     plt.xlabel("Time")

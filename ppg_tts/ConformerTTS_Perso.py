@@ -202,7 +202,7 @@ class ConformerTTSModel(L.LightningModule):
         if batch_idx % 70 == 0:
             mel_figures_path = self.logger.save_dir + "/mel_samples"
 
-            saved_mel = pred_mel[-1].detach().cpu().numpy()
+            saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
 
             plot_mel(saved_mel, path=mel_figures_path, key=batch['keys'][-1])
         
