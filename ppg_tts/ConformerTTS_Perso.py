@@ -77,7 +77,6 @@ class ConformerTTSModel(L.LightningModule):
                  warm_up_steps: int=25000,
                  gamma: float=0.95,
                  no_ctc: bool=False,
-                 exponential: bool=False,
                  rmse: bool=False):
         super().__init__()
 
@@ -89,7 +88,6 @@ class ConformerTTSModel(L.LightningModule):
         self.model_size = encode_ffn_dim
         self.gamma = gamma
         self.no_ctc = no_ctc
-        self.exp = exponential
         self.rmse = rmse
 
         self.mel_loss = mel_loss
@@ -122,9 +120,7 @@ class ConformerTTSModel(L.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        # import pdb
-        # pdb.set_trace()
-        pred_mel = self.model.forward(
+        pred_mel, refined_mel = self.model.forward(
             batch["ppg"],
             batch["ppg_len"],
             batch["spk_emb"],
@@ -134,11 +130,8 @@ class ConformerTTSModel(L.LightningModule):
             batch["mel_mask"]
         )
 
-        if self.exp:
-            pred_mel = torch.exp(pred_mel)
-            batch['mel'] = torch.exp(batch['mel'])
-
-        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        l_mel = self.mel_loss(pred_mel, batch["mel"]) \
+            + self.mel_loss(refined_mel, batch['mel'])
         
         if self.rmse and isinstance(self.mel_loss, torch.nn.MSELoss):
             l_mel = torch.sqrt(l_mel + 1e-9)
@@ -150,7 +143,7 @@ class ConformerTTSModel(L.LightningModule):
         return l_mel
 
     def validation_step(self, batch, batch_idx):
-        pred_mel = self.model.forward(
+        _, pred_mel = self.model.forward(
             batch["ppg"],
             batch["ppg_len"],
             batch["spk_emb"],
@@ -159,10 +152,6 @@ class ConformerTTSModel(L.LightningModule):
             batch["energy_len"],
             batch["mel_mask"]
         )
-
-        if self.exp:
-            pred_mel = torch.exp(pred_mel)
-            batch['mel'] = torch.exp(batch['mel'])
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
         
@@ -176,7 +165,7 @@ class ConformerTTSModel(L.LightningModule):
         return l_mel
 
     def test_step(self, batch, batch_idx):
-        pred_mel = self.model.forward(
+        _, pred_mel = self.model.forward(
             batch["ppg"],
             batch["ppg_len"],
             batch["spk_emb"],
@@ -185,10 +174,6 @@ class ConformerTTSModel(L.LightningModule):
             batch["energy_len"],
             batch["mel_mask"]
         )
-
-        if self.exp:
-            pred_mel = torch.exp(pred_mel)
-            batch['mel'] = torch.exp(batch['mel'])
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
         
@@ -210,7 +195,7 @@ class ConformerTTSModel(L.LightningModule):
 
     def predict_step(self, batch, batch_idx):
         with torch.no_grad():
-            pred_mel = self.model.forward(
+            _, pred_mel = self.model.forward(
                 batch["ppg"],
                 batch["ppg_len"],
                 batch["spk_emb"],

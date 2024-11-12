@@ -4,6 +4,7 @@ from torch import nn
 from torch.nn.functional import interpolate
 from torchaudio.models import Conformer
 from speechbrain.lobes.models.transformer.Conformer import ConformerEncoder, ConformerDecoder
+from speechbrain.lobes.models.Tacotron2 import Postnet
 from .modules import VarianceAdaptor, SpeakerEmbeddingEncoder
 
 class ConformerTTS(nn.Module):
@@ -40,6 +41,8 @@ class ConformerTTS(nn.Module):
         
         self.pred_net = nn.Linear(in_features=encode_dim * 2,
                                   out_features=target_dim)
+        
+        self.post_net = Postnet()
         
         self.spk_emb_enc = SpeakerEmbeddingEncoder(input_size=spk_emb_size,
                                                    model_size=emb_hidden_size,
@@ -80,7 +83,10 @@ class ConformerTTS(nn.Module):
                      target_length: int) -> torch.Tensor:
         x = x.permute(0, 2, 1).unsqueeze(-1)
 
-        x_interpolated = interpolate(x, size=(target_length, 1), mode='bilinear', align_corners=True)
+        x_interpolated = interpolate(x, 
+                                     size=(target_length, 1), 
+                                     mode='bilinear', 
+                                     align_corners=True)
 
         x_interpolated = x_interpolated.squeeze(-1).permute(0, 2, 1)
 
@@ -139,5 +145,9 @@ class ConformerTTS(nn.Module):
         z, z_length = self.conformer_dec(z, z_length)
         
         predicted_mel = self.pred_net(z)
+
+        predicted_mel = torch.transpose(predicted_mel, -1, -2)
+
+        post_mel = self.post_net(predicted_mel)
         
-        return predicted_mel
+        return predicted_mel, post_mel.transpose(-1, -2) + predicted_mel
