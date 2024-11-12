@@ -84,6 +84,8 @@ model:
   warm_up_steps: 25000
   gamma: 0.95
   no_ctc: false
+  exponential: false
+  rmse: false
 data:
   data_dir: ./data
   batch_size: 16
