@@ -39,6 +39,7 @@ def inference(a):
     generator.load_state_dict(state_dict_g['generator'])
 
     filelist = os.listdir(a.input_mels_dir)
+    filelist = [x for x in filelist is x.endswith('.npy')]
 
     os.makedirs(a.output_dir, exist_ok=True)
 
