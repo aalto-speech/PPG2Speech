@@ -145,9 +145,7 @@ class ConformerTTS(nn.Module):
         z, z_length = self.conformer_dec(z, z_length)
         
         predicted_mel = self.pred_net(z)
-
-        predicted_mel = torch.transpose(predicted_mel, -1, -2)
-
-        post_mel = self.post_net(predicted_mel)
+        
+        post_mel = self.post_net(predicted_mel.transpose(-1, -2))
         
         return predicted_mel, post_mel.transpose(-1, -2) + predicted_mel
