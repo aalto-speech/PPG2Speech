@@ -28,6 +28,7 @@ class PersoDataModule(L.LightningDataModule):
             self.train = PersoDatasetWithConditions(self.train_dir, self.no_ctc)
             self.val = PersoDatasetWithConditions(self.val_dir, self.no_ctc)
         elif stage == 'test' or stage == 'predict':
+            # self.test = PersoDatasetWithConditions(self.val_dir, self.no_ctc)
             self.test = PersoDatasetWithConditions(self.test_dir, self.no_ctc)
 
     def train_dataloader(self):
@@ -45,11 +46,13 @@ class PersoDataModule(L.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test,
                           batch_size=1,
+                          num_workers=4,
                           collate_fn=PersoCollateFn)
     
     def predict_dataloader(self):
         return DataLoader(self.test,
                           batch_size=1,
+                          num_workers=4,
                           collate_fn=PersoCollateFn)
 
 class ConformerTTSModel(L.LightningModule):
@@ -207,7 +210,8 @@ class ConformerTTSModel(L.LightningModule):
 
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
 
-        mel_save_dir = self.logger.save_dir + "/generated_mel"
+        # mel_save_dir = "/scratch/work/liz32/hifigan-perso-finetuned/ft_data/mel"
+        mel_save_dir = self.logger.save_dir + "/mel"
 
         if not os.path.exists(mel_save_dir):
             os.makedirs(mel_save_dir)
