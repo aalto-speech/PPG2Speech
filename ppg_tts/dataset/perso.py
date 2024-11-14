@@ -138,14 +138,14 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
     def _interpolate(self,
                      x: torch.Tensor,
                      target_length: int) -> torch.Tensor:
-        x = x.permute(0, 2, 1).unsqueeze(-1)
+        x = x.unsqueeze(0).permute(0, 2, 1)
 
         x_interpolated = interpolate(x, 
-                                     size=(target_length, 1), 
-                                     mode='bilinear', 
+                                     size=target_length, 
+                                     mode='linear', 
                                      align_corners=True)
 
-        x_interpolated = x_interpolated.squeeze(-1).permute(0, 2, 1)
+        x_interpolated = x_interpolated.permute(0, 2, 1).squeeze(0)
 
         return x_interpolated
 
