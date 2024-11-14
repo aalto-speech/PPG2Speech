@@ -8,6 +8,7 @@ from speechbrain.lobes.models.HifiGAN import mel_spectogram
 from typing import Tuple, Dict, List
 from torch.utils.data import Dataset
 from kaldiio import ReadHelper
+from torch.nn.functional import interpolate
 
 class PersoDatasetBasic(Dataset):
     def __init__(self, data_dir: str, target_sr: int=22050):
@@ -108,11 +109,16 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
             mel_scale="slaney"
         )
 
+        ppg = torch.from_numpy(self.ppgs[key].copy())
+        T = mel.size(-1)
+
+        ppg = self._interpolate(ppg, T)
+
         return {"key": key,
                 "feature": waveform,
                 "text": text,
                 "melspectrogram": mel.squeeze(),
-                "ppg": torch.from_numpy(self.ppgs[key].copy()),
+                "ppg": ppg,
                 "spk_emb": torch.from_numpy(self.spk_embs[key].copy()),
                 "log_F0": torch.from_numpy(self.log_F0[key].copy()),
                 "energy": energy.squeeze(),
@@ -128,6 +134,20 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 key2feat[key] = array
         
         return key2feat
+    
+    def _interpolate(self,
+                     x: torch.Tensor,
+                     target_length: int) -> torch.Tensor:
+        x = x.permute(0, 2, 1).unsqueeze(-1)
+
+        x_interpolated = interpolate(x, 
+                                     size=(target_length, 1), 
+                                     mode='bilinear', 
+                                     align_corners=True)
+
+        x_interpolated = x_interpolated.squeeze(-1).permute(0, 2, 1)
+
+        return x_interpolated
 
 
 def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:

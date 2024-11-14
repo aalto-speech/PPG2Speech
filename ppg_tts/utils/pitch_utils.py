@@ -8,8 +8,8 @@ from scipy.interpolate import interp1d
 def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndarray]:
     wav = utterance["feature"]
     foundamental_freq, voiced_flag, _ = pyin(y=wav.numpy(),
-                                             fmin=125,
-                                             fmax=7600,
+                                             fmin=1e-6,
+                                             fmax=8000,
                                              sr=22050,
                                              hop_length=256,
                                              frame_length=1024)
