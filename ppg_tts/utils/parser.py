@@ -17,7 +17,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no_ctc",
                         help="Whether use ctc output or w2v2 feature",
                         action="store_true")
-    parser.add_argument("--nj",
-                        help="number of jobs in pitch extraction",
-                        default=4)
+    parser.add_argument("--jobid",
+                        help="jobid in pitch extraction")
     return parser

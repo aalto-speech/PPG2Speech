@@ -7,7 +7,9 @@ from scipy.interpolate import interp1d
 
 def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndarray]:
     wav = utterance["feature"]
-    foundamental_freq, voiced_flag, _ = pyin(y=wav.numpy(),
+    if not isinstance(wav, np.ndarray):
+        wav = wav.numpy()
+    foundamental_freq, voiced_flag, _ = pyin(y=wav,
                                              fmin=1e-6,
                                              fmax=8000,
                                              sr=22050,
