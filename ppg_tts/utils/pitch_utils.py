@@ -22,7 +22,7 @@ def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndar
     
     logger.info(f"Process {os.getpid()} - {utterance['key']}: log_F0 shape {foundamental_freq.shape}")
     
-    return utterance["key"], foundamental_freq, voiced_flag.squeeze().astype(np.int32)
+    return utterance["key"], foundamental_freq, voiced_flag.squeeze().astype(np.float32)
 
 def convert_continuos_f0(key, f0):
     """CONVERT F0 TO CONTINUOUS F0
