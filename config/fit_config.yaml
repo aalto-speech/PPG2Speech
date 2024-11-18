@@ -58,33 +58,35 @@ trainer:
   reload_dataloaders_every_n_epochs: 0
   default_root_dir: null
 model:
-  mel_loss:
-    class_path: torch.nn.L1Loss
-  energy_loss: 
-    class_path: torch.nn.MSELoss
-  pitch_loss: 
-    class_path: torch.nn.MSELoss
-  ppg_dim: 34
-  encode_dim: 128
-  num_heads: 4
-  num_layers: 6
-  encode_ffn_dim: 1024
-  encode_kernel_size: 9
-  adapter_filter_size: 256
-  adapter_kernel_size: 3
-  n_bins: 256
-  stats_path: ./data/train/stats.json
-  spk_emb_size: 512
-  emb_hidden_size: 2048
-  dropout: 0.1
-  target_dim: 80
-  backend: torchaudio
-  lr: 1e-4
-  lr_scheduler: plateau
-  warm_up_steps: 25000
-  gamma: 0.98
-  no_ctc: false
-  rmse: false
+  class_path: ppg_tts.tts.LightningModule.ConformerTTSModel
+  init_args:
+    mel_loss:
+      class_path: torch.nn.L1Loss
+    energy_loss: 
+      class_path: torch.nn.MSELoss
+    pitch_loss: 
+      class_path: torch.nn.MSELoss
+    ppg_dim: 34
+    encode_dim: 128
+    num_heads: 4
+    num_layers: 6
+    encode_ffn_dim: 1024
+    encode_kernel_size: 9
+    adapter_filter_size: 256
+    adapter_kernel_size: 3
+    n_bins: 256
+    stats_path: ./data/train/stats.json
+    spk_emb_size: 512
+    emb_hidden_size: 2048
+    dropout: 0.1
+    target_dim: 80
+    backend: torchaudio
+    lr: 1e-4
+    lr_scheduler: plateau
+    warm_up_steps: 25000
+    gamma: 0.98
+    no_ctc: false
+    rmse: false
 data:
   data_dir: ./data
   batch_size: 16

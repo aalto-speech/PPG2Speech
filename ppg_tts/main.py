@@ -7,8 +7,7 @@ from .tts.LightningModule import ConformerTTSModel, ConformerWavenetTTSModel
 def cli_main():
     seed_everything(17, workers=True)
     torch.set_float32_matmul_precision('high')
-    cli = LightningCLI(ConformerWavenetTTSModel,
-                       PersoDataModule,
+    cli = LightningCLI(datamodule_class=PersoDataModule,
                        save_config_kwargs={"overwrite": True})
 
 if __name__ == "__main__":
