@@ -31,7 +31,7 @@ class ConformerWavenetTTS(nn.Module):
         self.no_ctc = no_ctc
 
         if no_ctc:
-            self.pre_conv = nn.Conv1d(1024, ppg_dim, kernel_size=1)
+            assert ppg_dim == 1024, "Wrong input dimension with no_ctc option"
 
         self.pre_net = nn.Linear(in_features=ppg_dim+2,
                                  out_features=encode_dim,
@@ -85,11 +85,6 @@ class ConformerWavenetTTS(nn.Module):
             predicted_energy: shape (B, T_mel)
         """
 
-        if self.no_ctc:
-            x = x.transpose(1, 2)
-            x = self.pre_conv(x)
-            x = x.transpose(1,2)
-        
         x = torch.cat([x,
                        pitch_target.unsqueeze(-1),
                        v_flag.unsqueeze(-1)
