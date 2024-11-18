@@ -13,7 +13,7 @@ ppg:
 	python -m ppg_tts.feature_extract.ppg_extract --data_dir $(data_dir) --device $(device) --no_ctc
 
 log_f0:
-	python -m ppg_tts.feature_extract.log_f0_extract --data_dir $(data_dir)
+	python -m ppg_tts.feature_extract.log_f0_extract_notrain --data_dir $(data_dir)
 
 stats:
 	python -m ppg_tts.feature_extract.make_stats --data_dir $(data_dir)

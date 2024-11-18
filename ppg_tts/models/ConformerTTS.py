@@ -78,20 +78,6 @@ class ConformerTTS(nn.Module):
         else:
             raise NotImplementedError("Speechbrain implement is not supported yet.")
         
-    def _interpolate(self,
-                     x: torch.Tensor,
-                     target_length: int) -> torch.Tensor:
-        x = x.permute(0, 2, 1).unsqueeze(-1)
-
-        x_interpolated = interpolate(x, 
-                                     size=(target_length, 1), 
-                                     mode='bilinear', 
-                                     align_corners=True)
-
-        x_interpolated = x_interpolated.squeeze(-1).permute(0, 2, 1)
-
-        return x_interpolated
-        
     def forward(self,
                 x: torch.Tensor,
                 x_length: torch.Tensor,
@@ -112,9 +98,7 @@ class ConformerTTS(nn.Module):
             prediected_mel: shape (B, T, 80)
             predicted_pitch: shape (B, T_mel)
             predicted_energy: shape (B, T_mel)
-        """        
-        T_mel = mel_mask.size(1)
-        x = self._interpolate(x, T_mel)
+        """
 
         if self.no_ctc:
             x = x.transpose(1, 2)

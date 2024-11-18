@@ -7,9 +7,11 @@ from scipy.interpolate import interp1d
 
 def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndarray]:
     wav = utterance["feature"]
-    foundamental_freq, voiced_flag, _ = pyin(y=wav.numpy(),
-                                             fmin=125,
-                                             fmax=7600,
+    if not isinstance(wav, np.ndarray):
+        wav = wav.numpy()
+    foundamental_freq, voiced_flag, _ = pyin(y=wav,
+                                             fmin=1e-6,
+                                             fmax=8000,
                                              sr=22050,
                                              hop_length=256,
                                              frame_length=1024)
@@ -20,7 +22,7 @@ def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndar
     
     logger.info(f"Process {os.getpid()} - {utterance['key']}: log_F0 shape {foundamental_freq.shape}")
     
-    return utterance["key"], foundamental_freq, voiced_flag.squeeze().astype(np.int32)
+    return utterance["key"], foundamental_freq, voiced_flag.squeeze().astype(np.float32)
 
 def convert_continuos_f0(key, f0):
     """CONVERT F0 TO CONTINUOUS F0
