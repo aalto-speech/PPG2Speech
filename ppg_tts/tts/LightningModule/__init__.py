@@ -1,1 +1,2 @@
 from .ConformerTTS import ConformerTTSModel
+from .ConformerWavenetTTS import ConformerWavenetTTSModel

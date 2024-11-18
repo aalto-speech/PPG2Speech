@@ -108,7 +108,9 @@ class ConformerWavenetTTS(nn.Module):
             ],
             dim=-1)
         
-        predicted_mel = self.decoder(z)
+        predicted_mel = self.decoder(z.transpose(-1, -2))
+
+        predicted_mel = predicted_mel.transpose(-1, -2)
 
         mel_mask = mel_mask.unsqueeze(-1)
         
