@@ -1,7 +1,8 @@
 import torch
 from lightning.pytorch.cli import LightningCLI
 from lightning.pytorch import seed_everything
-from .ConformerTTS_Perso import ConformerTTSModel, PersoDataModule
+from .tts.DataModule import PersoDataModule
+from .tts.LightningModule import ConformerTTSModel
 
 def cli_main():
     cli = LightningCLI(ConformerTTSModel,
