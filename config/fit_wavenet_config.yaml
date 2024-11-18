@@ -81,6 +81,8 @@ model:
       - 16
       - 32
       - 64
+      - 128
+      - 256
     dropout: 0.1
     target_dim: 80
     backend: torchaudio
