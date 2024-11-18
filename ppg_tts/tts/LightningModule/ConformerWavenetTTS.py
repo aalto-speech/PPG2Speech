@@ -72,10 +72,11 @@ class ConformerWavenetTTSModel(L.LightningModule):
             batch["log_F0"],
             batch["v_flag"],
             batch["energy_len"],
-            batch["mel_mask"]
         )
+        mel_mask = batch['mel_mask'].unsqueeze(-1)
+        pred_mel.masked_fill_(mel_mask, 0.0)
 
-        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        l_mel = self.mel_loss(pred_mel, batch["mel"].masked_fill_(mel_mask, 0.0))
         
         if self.rmse and isinstance(self.mel_loss, torch.nn.MSELoss):
             l_mel = torch.sqrt(l_mel + 1e-9)
@@ -97,7 +98,10 @@ class ConformerWavenetTTSModel(L.LightningModule):
             batch["mel_mask"]
         )
 
-        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        mel_mask = batch['mel_mask'].unsqueeze(-1)
+        pred_mel.masked_fill_(mel_mask, 0.0)
+
+        l_mel = self.mel_loss(pred_mel, batch["mel"].masked_fill_(mel_mask, 0.0))
         
         if self.rmse and isinstance(self.mel_loss, torch.nn.MSELoss):
             l_mel = torch.sqrt(l_mel + 1e-9)

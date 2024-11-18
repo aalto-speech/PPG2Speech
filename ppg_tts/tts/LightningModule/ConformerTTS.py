@@ -60,18 +60,11 @@ class ConformerTTSModel(L.LightningModule):
             num_layers=num_layers,
             encode_ffn_dim=encode_ffn_dim,
             encode_kernel_size=encode_kernel_size,
-            adapter_filter_size=adapter_filter_size,
-            adapter_kernel_size=adapter_kernel_size,
-            n_bins=n_bins,
             spk_emb_size=spk_emb_size,
             emb_hidden_size=emb_hidden_size,
             dropout=dropout,
             target_dim=target_dim,
             backend=backend,
-            energy_min=stats['energy_min'],
-            energy_max=stats['energy_max'],
-            pitch_min=stats['pitch_min'],
-            pitch_max=stats['pitch_max'],
             no_ctc=self.no_ctc,
         )
 
@@ -86,8 +79,12 @@ class ConformerTTSModel(L.LightningModule):
             batch["mel_mask"]
         )
 
-        l_mel = self.mel_loss(pred_mel, batch["mel"]) \
-            + self.mel_loss(refined_mel, batch['mel'])
+        mel_mask = batch['mel_mask'].unsqueeze(-1)
+        pred_mel.masked_fill_(mel_mask, 0.0)
+        refined_mel.masked_fill_(mel_mask, 0.0)
+
+        l_mel = self.mel_loss(pred_mel, batch["mel"].masked_fill_(mel_mask, 0.0)) \
+            + self.mel_loss(refined_mel, batch['mel'].masked_fill_(mel_mask, 0.0))
         
         if self.rmse and isinstance(self.mel_loss, torch.nn.MSELoss):
             l_mel = torch.sqrt(l_mel + 1e-9)
@@ -106,10 +103,12 @@ class ConformerTTSModel(L.LightningModule):
             batch["log_F0"],
             batch["v_flag"],
             batch["energy_len"],
-            batch["mel_mask"]
         )
 
-        l_mel = self.mel_loss(pred_mel, batch["mel"])
+        mel_mask = batch['mel_mask'].unsqueeze(-1)
+        pred_mel.masked_fill_(mel_mask, 0.0)
+
+        l_mel = self.mel_loss(pred_mel, batch["mel"].masked_fill_(mel_mask, 0.0))
         
         if self.rmse and isinstance(self.mel_loss, torch.nn.MSELoss):
             l_mel = torch.sqrt(l_mel + 1e-9)

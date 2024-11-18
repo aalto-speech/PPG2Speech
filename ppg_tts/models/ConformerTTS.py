@@ -66,8 +66,7 @@ class ConformerTTS(nn.Module):
                 spk_emb: torch.Tensor,
                 pitch_target: torch.Tensor,
                 v_flag: torch.Tensor,
-                energy_length: torch.Tensor,
-                mel_mask: torch.Tensor):
+                energy_length: torch.Tensor):
         """
         Arguments:
             x: input PPG, shape (B, T_ppg, E)
@@ -110,7 +109,5 @@ class ConformerTTS(nn.Module):
         post_mel = self.post_net(predicted_mel.transpose(-1, -2))
 
         refined_mel = post_mel.transpose(-1, -2) + predicted_mel
-
-        mel_mask = mel_mask.unsqueeze(-1)
         
-        return predicted_mel.masked_fill(mel_mask, 0), refined_mel.masked_fill(mel_mask, 0)
+        return predicted_mel, refined_mel

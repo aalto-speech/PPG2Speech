@@ -69,8 +69,7 @@ class ConformerWavenetTTS(nn.Module):
                 spk_emb: torch.Tensor,
                 pitch_target: torch.Tensor,
                 v_flag: torch.Tensor,
-                energy_length: torch.Tensor,
-                mel_mask: torch.Tensor):
+                energy_length: torch.Tensor):
         """
         Arguments:
             x: input PPG, shape (B, T_ppg, E)
@@ -106,7 +105,5 @@ class ConformerWavenetTTS(nn.Module):
         predicted_mel = self.decoder(z.transpose(-1, -2))
 
         predicted_mel = predicted_mel.transpose(-1, -2)
-
-        mel_mask = mel_mask.unsqueeze(-1)
         
-        return predicted_mel.masked_fill(mel_mask, 0)
+        return predicted_mel
