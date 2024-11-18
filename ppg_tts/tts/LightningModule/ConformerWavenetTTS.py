@@ -95,7 +95,6 @@ class ConformerWavenetTTSModel(L.LightningModule):
             batch["log_F0"],
             batch["v_flag"],
             batch["energy_len"],
-            batch["mel_mask"]
         )
 
         mel_mask = batch['mel_mask'].unsqueeze(-1)
@@ -120,7 +119,6 @@ class ConformerWavenetTTSModel(L.LightningModule):
             batch["log_F0"],
             batch["v_flag"],
             batch["energy_len"],
-            batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])

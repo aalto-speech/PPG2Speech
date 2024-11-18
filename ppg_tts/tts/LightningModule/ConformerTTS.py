@@ -127,7 +127,6 @@ class ConformerTTSModel(L.LightningModule):
             batch["log_F0"],
             batch["v_flag"],
             batch["energy_len"],
-            batch["mel_mask"]
         )
 
         l_mel = self.mel_loss(pred_mel, batch["mel"])
@@ -157,7 +156,6 @@ class ConformerTTSModel(L.LightningModule):
                 batch["log_F0"],
                 batch["v_flag"],
                 batch["energy_len"],
-                batch["mel_mask"]
             )
 
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
