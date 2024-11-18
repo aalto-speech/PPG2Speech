@@ -1,0 +1,97 @@
+# lightning.pytorch==2.4.0
+seed_everything: true
+trainer:
+  accelerator: auto
+  strategy: auto
+  devices: auto
+  num_nodes: 1
+  precision: null
+  logger: 
+    class_path: lightning.pytorch.loggers.WandbLogger
+    init_args:
+      project: "PPG_TTS_Conformer"
+      name: 
+      save_dir: "./logs/"
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: 'epoch'
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: './exp'
+        monitor: 'val/mel_loss'
+        save_top_k: 5
+        save_on_train_epoch_end: false
+        auto_insert_metric_name: true
+        mode: 'min'
+        save_last: true
+  fast_dev_run: false
+  max_epochs: 50
+  min_epochs: 20
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  overfit_batches: 0.0
+  val_check_interval: null
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: null
+  log_every_n_steps: 5
+  enable_checkpointing: true
+  enable_progress_bar: false
+  enable_model_summary: null
+  accumulate_grad_batches: 1
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  deterministic: null
+  benchmark: null
+  inference_mode: true
+  use_distributed_sampler: true
+  profiler: null
+  detect_anomaly: false
+  barebones: false
+  plugins: null
+  sync_batchnorm: false
+  reload_dataloaders_every_n_epochs: 0
+  default_root_dir: null
+model:
+  mel_loss:
+    class_path: torch.nn.L1Loss
+  ppg_dim: 34
+  encode_dim: 128
+  num_heads: 4
+  num_layers: 6
+  encode_ffn_dim: 1024
+  encode_kernel_size: 9
+  spk_emb_size: 512
+  emb_hidden_size: 2048
+  wavenet_residual_channels: 64
+  wavenet_skip_channels: 64
+  wavenet_kernel_size: 2
+  wavenet_dilations:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+  dropout: 0.1
+  target_dim: 80
+  backend: torchaudio
+  lr: 1e-4
+  lr_scheduler: plateau
+  warm_up_steps: 25000
+  gamma: 0.98
+  no_ctc: false
+  rmse: false
+data:
+  data_dir: ./data
+  batch_size: 16
+  no_ctc: false
+optimizer: null
+lr_scheduler: null
+ckpt_path: null

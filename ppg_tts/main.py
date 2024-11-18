@@ -2,14 +2,14 @@ import torch
 from lightning.pytorch.cli import LightningCLI
 from lightning.pytorch import seed_everything
 from .tts.DataModule import PersoDataModule
-from .tts.LightningModule import ConformerTTSModel
+from .tts.LightningModule import ConformerTTSModel, ConformerWavenetTTSModel
 
 def cli_main():
-    cli = LightningCLI(ConformerTTSModel,
+    seed_everything(17, workers=True)
+    torch.set_float32_matmul_precision('high')
+    cli = LightningCLI(ConformerWavenetTTSModel,
                        PersoDataModule,
                        save_config_kwargs={"overwrite": True})
 
 if __name__ == "__main__":
-    seed_everything(17, workers=True)
-    torch.set_float32_matmul_precision('high')
     cli_main()
