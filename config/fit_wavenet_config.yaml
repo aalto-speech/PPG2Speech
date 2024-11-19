@@ -87,7 +87,7 @@ model:
     target_dim: 80
     backend: torchaudio
     lr: 1e-4
-    lr_scheduler: plateau
+    lr_scheduler: exponential
     warm_up_steps: 25000
     gamma: 0.98
     no_ctc: false

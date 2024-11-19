@@ -20,7 +20,7 @@ trainer:
       init_args:
         dirpath: './exp'
         monitor: 'val/mel_loss'
-        save_top_k: 3
+        save_top_k: 5
         save_on_train_epoch_end: false
         auto_insert_metric_name: true
         mode: 'min'
@@ -58,26 +58,30 @@ trainer:
   reload_dataloaders_every_n_epochs: 0
   default_root_dir: null
 model:
-  class_path: ppg_tts.tts.LightningModule.ConformerTTSModel
+  class_path: ppg_tts.tts.LightningModule.ConformerWavenetTTSModel
   init_args:
     mel_loss:
       class_path: torch.nn.L1Loss
-    energy_loss: 
-      class_path: torch.nn.MSELoss
-    pitch_loss: 
-      class_path: torch.nn.MSELoss
     ppg_dim: 34
     encode_dim: 128
     num_heads: 4
     num_layers: 6
     encode_ffn_dim: 1024
     encode_kernel_size: 9
-    adapter_filter_size: 256
-    adapter_kernel_size: 3
-    n_bins: 256
-    stats_path: ./data/train/stats.json
     spk_emb_size: 512
     emb_hidden_size: 2048
+    wavenet_residual_channels: 64
+    wavenet_skip_channels: 64
+    wavenet_kernel_size: 2
+    wavenet_dilations:
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
     dropout: 0.1
     target_dim: 80
     backend: torchaudio
@@ -87,6 +91,7 @@ model:
     gamma: 0.98
     no_ctc: false
     rmse: false
+    causal: true
 data:
   data_dir: ./data
   batch_size: 16

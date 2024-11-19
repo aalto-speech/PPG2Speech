@@ -25,7 +25,8 @@ class ConformerWavenetTTS(nn.Module):
                  dropout: float=0.1,
                  target_dim: int=80,
                  backend: str="torchaudio",
-                 no_ctc: bool=False):
+                 no_ctc: bool=False,
+                 causal: bool=True):
         super(ConformerWavenetTTS, self).__init__()
 
         self.no_ctc = no_ctc
@@ -54,12 +55,12 @@ class ConformerWavenetTTS(nn.Module):
                                            depthwise_conv_kernel_size=encode_kernel_size,
                                            dropout=dropout)
             
-            self.conformer_fusion = Conformer(input_dim=encode_dim * 2,
-                                              num_heads=num_heads * 2,
-                                              ffn_dim=encode_ffn_dim * 2,
-                                              num_layers=num_layers,
-                                              depthwise_conv_kernel_size=encode_kernel_size,
-                                              dropout=dropout)
+            # self.conformer_fusion = Conformer(input_dim=encode_dim * 2,
+            #                                   num_heads=num_heads * 2,
+            #                                   ffn_dim=encode_ffn_dim * 2,
+            #                                   num_layers=num_layers,
+            #                                   depthwise_conv_kernel_size=encode_kernel_size,
+            #                                   dropout=dropout)
         else:
             raise NotImplementedError("Speechbrain implement is not supported yet.")
         
@@ -68,7 +69,8 @@ class ConformerWavenetTTS(nn.Module):
                                residual_channels=wavenet_residual_channels,
                                skip_channels=wavenet_skip_channels,
                                kernel_size=wavenet_kernel_size,
-                               dilations=wavenet_dilations)
+                               dilations=wavenet_dilations,
+                               causal=causal)
         
     def forward(self,
                 x: torch.Tensor,
@@ -109,7 +111,7 @@ class ConformerWavenetTTS(nn.Module):
             ],
             dim=-1)
         
-        z, _ = self.conformer_fusion(z, z_length)
+        # z, _ = self.conformer_fusion(z, z_length)
         
         predicted_mel = self.decoder(z.transpose(-1, -2))
 
