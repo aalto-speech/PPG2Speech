@@ -65,7 +65,7 @@ class ConformerWavenetTTS(nn.Module):
         else:
             raise NotImplementedError("Speechbrain implement is not supported yet.")
         
-        self.decoder = WaveNet(input_channels=2 * encode_dim,
+        self.decoder = WaveNet(input_channels=encode_dim,
                                output_channels=target_dim,
                                residual_channels=wavenet_residual_channels,
                                skip_channels=wavenet_skip_channels,
