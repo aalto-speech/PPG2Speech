@@ -53,6 +53,13 @@ class ConformerWavenetTTS(nn.Module):
                                            ffn_dim=encode_ffn_dim,
                                            depthwise_conv_kernel_size=encode_kernel_size,
                                            dropout=dropout)
+            
+            self.conformer_fusion = Conformer(input_dim=encode_dim * 2,
+                                              num_heads=num_heads * 2,
+                                              ffn_dim=encode_ffn_dim * 2,
+                                              num_layers=num_layers,
+                                              depthwise_conv_kernel_size=encode_kernel_size,
+                                              dropout=dropout)
         else:
             raise NotImplementedError("Speechbrain implement is not supported yet.")
         
@@ -101,6 +108,8 @@ class ConformerWavenetTTS(nn.Module):
             encoded_spk_emb.unsqueeze(1).repeat(1, z.size(1), 1)
             ],
             dim=-1)
+        
+        z, _ = self.conformer_fusion(z, z_length)
         
         predicted_mel = self.decoder(z.transpose(-1, -2))
 
