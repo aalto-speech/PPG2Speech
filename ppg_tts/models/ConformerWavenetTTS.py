@@ -19,6 +19,7 @@ class ConformerWavenetTTS(nn.Module):
                  wavenet_residual_channels: int,
                  wavenet_skip_channels: int,
                  wavenet_kernel_size: int,
+                 wavenet_cond_channel: int,
                  spk_emb_size: int,
                  emb_hidden_size: int,
                  wavenet_dilations: List[int]=[1, 2, 4, 8, 16, 32, 64],
@@ -70,7 +71,8 @@ class ConformerWavenetTTS(nn.Module):
                                skip_channels=wavenet_skip_channels,
                                kernel_size=wavenet_kernel_size,
                                dilations=wavenet_dilations,
-                               causal=causal)
+                               causal=causal,
+                               cond_channels=wavenet_cond_channel)
         
     def forward(self,
                 x: torch.Tensor,
@@ -99,21 +101,23 @@ class ConformerWavenetTTS(nn.Module):
                        ],
                       dim=-1)
         
-        encoded_spk_emb = self.spk_emb_enc(spk_emb)
+        # encoded_spk_emb = self.spk_emb_enc(spk_emb)
         
         z = self.pre_net(x)
         
         z, z_length = self.conformer_enc(z, energy_length)
         
-        z = torch.cat([
-            z,
-            encoded_spk_emb.unsqueeze(1).repeat(1, z.size(1), 1)
-            ],
-            dim=-1)
+        # z = torch.cat([
+        #     z,
+        #     encoded_spk_emb.unsqueeze(1).repeat(1, z.size(1), 1)
+        #     ],
+        #     dim=-1)
+        
+        spk_emb = spk_emb.unsqueeze(-1).repeat((1, 1, z.size(1)))
         
         # z, _ = self.conformer_fusion(z, z_length)
         
-        predicted_mel = self.decoder(z.transpose(-1, -2))
+        predicted_mel = self.decoder(z.transpose(-1, -2), spk_emb)
 
         predicted_mel = predicted_mel.transpose(-1, -2)
         

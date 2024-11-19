@@ -73,6 +73,7 @@ model:
     wavenet_residual_channels: 64
     wavenet_skip_channels: 64
     wavenet_kernel_size: 2
+    wavenet_cond_channel: 512
     wavenet_dilations:
       - 1
       - 1
