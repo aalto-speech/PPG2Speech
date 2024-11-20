@@ -18,6 +18,7 @@ class ConvolutionLayer(torch.nn.Module):
                  use_output_transform=True,
                  cond_channels=None,
                  skip_channels=None,
+                 use_film: bool = False
                  ):
         super().__init__()
 
@@ -34,7 +35,7 @@ class ConvolutionLayer(torch.nn.Module):
             in_channels=in_channels,
             out_channels=self.channel_mul * residual_channels,
             kernel_size=kernel_size, dilation=dilation, bias=bias,
-            device=device, dtype=dtype, causal=causal)
+            device=device, dtype=dtype, causal=causal, use_film=use_film)
         # TODO: make parameter alloc conditional on use_output_transform
         self.out = Convolution(
             in_channels=residual_channels,

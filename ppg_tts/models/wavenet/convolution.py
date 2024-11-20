@@ -47,9 +47,10 @@ class Convolution(torch.nn.Conv1d):
         """
 
         if cond_input is not None:
-            if self.use_film and cond_input.size(1) != 2 * self.out_channels:
-                raise ValueError(f"Cond input number of channels mismatch."
-                                 f"Expected {2*self.out_channels}, got {cond_input.size(1)}")
+            if self.use_film and hasattr(self, "channel_mapping"):
+                # raise ValueError(f"Cond input number of channels mismatch."
+                #                  f"Expected {2*self.out_channels}, got {cond_input.size(1)}")
+                self.channel_mapping = torch.nn.Linear(cond_input.size(1), 2*self.out_channels, device=self.weight.device)
             if not self.use_film and cond_input.size(1) != self.out_channels:
                 raise ValueError(f"Cond input number of channels mismatch."
                                  f"Expected {self.out_channels}, got {cond_input.size(1)}")
@@ -89,6 +90,7 @@ class Convolution(torch.nn.Conv1d):
 
         if cond_input is not None:
             if self.use_film:
+                cond_input = self.channel_mapping(cond_input.transpose(-1, -2)).transpose(-1, -2)
                 b, a = torch.chunk(cond_input, 2, dim=1)
                 output = a * output + b
             else:

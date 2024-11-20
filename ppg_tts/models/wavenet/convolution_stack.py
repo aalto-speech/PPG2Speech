@@ -16,6 +16,7 @@ class ConvolutionStack(torch.nn.Module):
                  use_residual=True,
                  use_1x1_block_out=True,
                  cond_channels=None,
+                 use_film: bool = False,
                  ):
         super().__init__()
 
@@ -46,6 +47,7 @@ class ConvolutionStack(torch.nn.Module):
                     use_output_transform=use_output_transform,
                     cond_channels=self.cond_channels,
                     skip_channels=self.skip_channels,
+                    use_film=use_film
                 )
             )
 

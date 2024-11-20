@@ -95,6 +95,7 @@ model:
     no_ctc: false
     rmse: false
     causal: false
+    use_film: true
 data:
   data_dir: ./data
   batch_size: 16

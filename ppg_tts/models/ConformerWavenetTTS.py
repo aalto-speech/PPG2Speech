@@ -27,7 +27,8 @@ class ConformerWavenetTTS(nn.Module):
                  target_dim: int=80,
                  backend: str="torchaudio",
                  no_ctc: bool=False,
-                 causal: bool=True):
+                 causal: bool=True,
+                 use_film: bool = False):
         super(ConformerWavenetTTS, self).__init__()
 
         self.no_ctc = no_ctc
@@ -72,7 +73,8 @@ class ConformerWavenetTTS(nn.Module):
                                kernel_size=wavenet_kernel_size,
                                dilations=wavenet_dilations,
                                causal=causal,
-                               cond_channels=wavenet_cond_channel)
+                               cond_channels=wavenet_cond_channel,
+                               use_film=use_film)
         
     def forward(self,
                 x: torch.Tensor,

@@ -18,6 +18,7 @@ class WaveNet(torch.nn.Module):
                  use_residual: bool = True,
                  cond_channels: int = None,
                  cond_net: torch.nn.Module = None,
+                 use_film: bool = False,
                  ):
         super().__init__()
 
@@ -33,6 +34,7 @@ class WaveNet(torch.nn.Module):
         self.use_residual = use_residual
         self.num_layers = len(dilations)
         self.causal = causal
+        self.use_film = use_film
 
         # Layers
         self.input = ConvolutionLayer(
@@ -47,7 +49,8 @@ class WaveNet(torch.nn.Module):
             activation=self.activation,
             use_residual=True,
             causal=self.causal,
-            cond_channels=cond_channels)
+            cond_channels=cond_channels,
+            use_film=use_film)
         # TODO: output layers should be just convolution, These hanve conv and Out
         self.output1 = ConvolutionLayer(
             in_channels=self.skip_channels,

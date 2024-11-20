@@ -32,7 +32,8 @@ class ConformerWavenetTTSModel(L.LightningModule):
                  gamma: float=0.98,
                  no_ctc: bool=False,
                  rmse: bool=False,
-                 causal: bool=True):
+                 causal: bool=True,
+                 use_film: bool=False):
         super().__init__()
 
         self.save_hyperparameters()
@@ -65,7 +66,8 @@ class ConformerWavenetTTSModel(L.LightningModule):
             target_dim=target_dim,
             backend=backend,
             no_ctc=self.no_ctc,
-            causal=causal
+            causal=causal,
+            use_film=use_film
         )
 
     def training_step(self, batch, batch_idx):
