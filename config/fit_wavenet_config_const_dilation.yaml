@@ -70,9 +70,9 @@ model:
     encode_kernel_size: 9
     spk_emb_size: 512
     emb_hidden_size: 2048
-    wavenet_residual_channels: 64
-    wavenet_skip_channels: 64
-    wavenet_kernel_size: 2
+    wavenet_residual_channels: 256
+    wavenet_skip_channels: 256
+    wavenet_kernel_size: 5
     wavenet_cond_channel: 512
     wavenet_dilations:
       - 1
@@ -92,7 +92,7 @@ model:
     gamma: 0.98
     no_ctc: false
     rmse: false
-    causal: true
+    causal: false
 data:
   data_dir: ./data
   batch_size: 16
