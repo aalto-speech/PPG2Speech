@@ -74,11 +74,9 @@ class ConformerTTS(nn.Module):
             pitch_target: shape (B, T_mel)
             v_flag: shape (B, T_mel)
             energy_length: shape (B,)
-            mel_mask: shape (B, T_mel)
         Returns:
             prediected_mel: shape (B, T, 80)
-            predicted_pitch: shape (B, T_mel)
-            predicted_energy: shape (B, T_mel)
+            refined_mel: shape (B, T, 80)
         """
         
         x = torch.cat([x,
