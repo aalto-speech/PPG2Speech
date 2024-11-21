@@ -4,7 +4,6 @@ sbatch_scripts/
 sbatch_logs/
 logs/
 exp*/
-test*/
 vocoder/hifigan/ckpt/
 inspect_vocoder/
 

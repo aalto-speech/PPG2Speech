@@ -48,7 +48,10 @@ class ConformerMatchaTTS(nn.Module):
             cfm_params={
                 'sigma_min': sigma_min
             },
-            spk_emb_dim=512,
+            spk_emb_dim=spk_emb_size,
+            decoder_params={
+                'dropout': dropout
+            },
         )
 
     def forward(self,

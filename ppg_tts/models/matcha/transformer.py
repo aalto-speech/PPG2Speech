@@ -108,7 +108,7 @@ class FeedForward(nn.Module):
 
         if activation_fn == "gelu":
             act_fn = GELU(dim, inner_dim)
-        if activation_fn == "gelu-approximate":
+        elif activation_fn == "gelu-approximate":
             act_fn = GELU(dim, inner_dim, approximate="tanh")
         elif activation_fn == "geglu":
             act_fn = GEGLU(dim, inner_dim)
@@ -116,6 +116,8 @@ class FeedForward(nn.Module):
             act_fn = ApproximateGELU(dim, inner_dim)
         elif activation_fn == "snakebeta":
             act_fn = SnakeBeta(dim, inner_dim)
+        else:
+            raise ValueError(f"No supporting activation. Choose from [gelu, gelu-approximate, geglu, geglu-approximate, snakebeta]")
 
         self.net = nn.ModuleList([])
         # project in

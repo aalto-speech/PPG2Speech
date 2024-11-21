@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 import torch.nn as nn  # pylint: disable=consider-using-from-import
 import torch.nn.functional as F
-from torchaudio.models.conformer import ConformerLayer
+from conformer import ConformerBlock
 from diffusers.models.activations import get_activation
 from einops import pack, rearrange, repeat
 
@@ -157,6 +157,44 @@ class Upsample1D(nn.Module):
 
         return outputs
 
+class ConformerWrapper(ConformerBlock):
+    def __init__(  # pylint: disable=useless-super-delegation
+        self,
+        *,
+        dim,
+        dim_head=64,
+        heads=8,
+        ff_mult=4,
+        conv_expansion_factor=2,
+        conv_kernel_size=31,
+        attn_dropout=0,
+        ff_dropout=0,
+        conv_dropout=0,
+        conv_causal=False,
+    ):
+        super().__init__(
+            dim=dim,
+            dim_head=dim_head,
+            heads=heads,
+            ff_mult=ff_mult,
+            conv_expansion_factor=conv_expansion_factor,
+            conv_kernel_size=conv_kernel_size,
+            attn_dropout=attn_dropout,
+            ff_dropout=ff_dropout,
+            conv_dropout=conv_dropout,
+            conv_causal=conv_causal,
+        )
+
+    def forward(
+        self,
+        hidden_states,
+        attention_mask,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        timestep=None,
+    ):
+        return super().forward(x=hidden_states, mask=attention_mask.bool())
+
 
 class Decoder(nn.Module):
     def __init__(
@@ -169,7 +207,7 @@ class Decoder(nn.Module):
         n_blocks=1,
         num_mid_blocks=2,
         num_heads=4,
-        act_fn="snake",
+        act_fn="snakebeta",
         down_block_type="transformer",
         mid_block_type="transformer",
         up_block_type="transformer",
@@ -279,12 +317,16 @@ class Decoder(nn.Module):
     @staticmethod
     def get_block(block_type, dim, attention_head_dim, num_heads, dropout, act_fn):
         if block_type == "conformer":
-            block = ConformerLayer(
-                input_dim=dim,
-                ffn_dim=attention_head_dim * num_heads,
-                num_attention_heads=num_heads,
-                depthwise_conv_kernel_size=31,
-                dropout=dropout
+            block = ConformerWrapper(
+                dim=dim,
+                dim_head=attention_head_dim,
+                heads=num_heads,
+                ff_mult=1,
+                conv_expansion_factor=2,
+                ff_dropout=dropout,
+                attn_dropout=dropout,
+                conv_dropout=dropout,
+                conv_kernel_size=31,
             )
         elif block_type == "transformer":
             block = BasicTransformerBlock(
