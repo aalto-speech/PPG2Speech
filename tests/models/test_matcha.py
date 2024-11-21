@@ -139,19 +139,19 @@ class TestConformerMatchaTTS(unittest.TestCase):
             spk_emb_size=512,
         )
 
-        self.x = torch.randn((4, 8, 34))
+        self.x = torch.randn((4, 9, 34))
         self.spk_emb = torch.randn((4,512))
-        self.pitch = torch.randn((4, 8))
-        self.v_flag = torch.randn((4,8))
+        self.pitch = torch.randn((4, 9))
+        self.v_flag = torch.randn((4,9))
         self.energy_length = torch.LongTensor([
-            4, 5, 6, 8
+            4, 5, 6, 9
         ])
-        self.mel_target = torch.randn((4,8,80))
+        self.mel_target = torch.randn((4,9,80))
         self.mel_mask = torch.FloatTensor([
-            [1,1,1,1,0,0,0,0],
-            [1,1,1,1,1,0,0,0],
-            [1,1,1,1,1,1,0,0],
-            [1,1,1,1,1,1,1,1]
+            [1,1,1,1,0,0,0,0,0],
+            [1,1,1,1,1,0,0,0,0],
+            [1,1,1,1,1,1,0,0,0],
+            [1,1,1,1,1,1,1,1,1]
         ])
 
     def testForward(self):
@@ -165,7 +165,7 @@ class TestConformerMatchaTTS(unittest.TestCase):
             mel_target=self.mel_target
         )
 
-        self.assertTupleEqual(y.shape, (4, 80, 8))
+        self.assertTupleEqual(y.shape, (4, 80, 10))
 
     def testSynthesis(self):
         mel = self.model.synthesis(
@@ -178,7 +178,7 @@ class TestConformerMatchaTTS(unittest.TestCase):
             diff_steps=10
         )
 
-        self.assertTupleEqual(mel.shape, (4, 8, 80))
+        self.assertTupleEqual(mel.shape, (4, 9, 80))
 
 
 if __name__ == "__main__":

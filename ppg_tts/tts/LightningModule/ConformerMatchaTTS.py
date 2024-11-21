@@ -42,6 +42,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             encode_dim=encode_dim,
             encode_heads=encode_heads,
             encode_layers=encode_layers,
+            encode_ffn_dim=encode_ffn_dim,
             encode_kernel_size=encode_kernel_size,
             spk_emb_size=spk_emb_size,
             dropout=dropout,

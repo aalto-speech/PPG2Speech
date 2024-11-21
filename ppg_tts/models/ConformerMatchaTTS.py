@@ -101,14 +101,42 @@ class ConformerMatchaTTS(nn.Module):
 
         mu = self.channel_mapping(x_enc)
 
+        if mu.size(1) % 2 == 1:
+            mu, mel_mask, mel_target = self._pad_to_even(mu,
+                                                         mel_mask,
+                                                         mel_target)
+
         loss, y = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
-            mask=mel_mask.unsqueeze(1),
+            mask=~mel_mask.unsqueeze(1),
             spks=spk_emb
         )
 
         return loss, y
+    
+    def _pad_to_even(self,
+                     mu: torch.Tensor,
+                     mel_mask: torch.Tensor,
+                     mel_target: torch.Tensor=None):
+        pad_mu = nn.functional.pad(mu,
+                                   (0,0,0,1),
+                                   mode='constant',
+                                   value=0.0)
+        pad_mask = nn.functional.pad(mel_mask,
+                                     (0,1),
+                                     mode='constant',
+                                     value=True)
+
+        if mel_target is not None:
+            pad_mel_target = nn.functional.pad(mel_target,
+                                               (0,0,0,1),
+                                               mode='constant',
+                                               value=0.0)
+        else:
+            pad_mel_target = None
+            
+        return pad_mu, pad_mask, pad_mel_target
     
     @torch.inference_mode()
     def synthesis(self,
@@ -132,6 +160,8 @@ class ConformerMatchaTTS(nn.Module):
             pred_mel: shape (B, T, 80)
         """
 
+        pad_to_odd = False
+
         x = torch.cat([x,
                        pitch_target.unsqueeze(-1),
                        v_flag.unsqueeze(-1)
@@ -146,11 +176,19 @@ class ConformerMatchaTTS(nn.Module):
 
         mu = self.channel_mapping(x_enc)
 
+        if mu.size(1) % 2 == 1:
+            pad_to_odd = True
+            mu, mel_mask, _ = self._pad_to_even(mu,
+                                                mel_mask)
+
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
-            mask=mel_mask.unsqueeze(1),
+            mask=~mel_mask.unsqueeze(1),
             n_timesteps=diff_steps,
             spks=spk_emb
         )
+
+        if pad_to_odd:
+            pred_mel = pred_mel[:, :, :-1]
 
         return pred_mel.transpose(-1, -2)
