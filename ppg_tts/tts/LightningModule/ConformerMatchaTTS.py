@@ -70,16 +70,15 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        with torch.no_grad:
-            loss, _ = self.model.forward(
-                x=batch['ppg'],
-                spk_emb=batch['spk_emb'],
-                pitch_target=batch['log_F0'],
-                v_flag=batch['v_flag'],
-                energy_length=batch['energy_len'],
-                mel_target=batch['mel'],
-                mel_mask=batch['mel_mask']
-            )
+        loss, _ = self.model.forward(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_target=batch['mel'],
+            mel_mask=batch['mel_mask']
+        )
 
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
@@ -101,16 +100,15 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return loss
 
     def test_step(self, batch, batch_idx):
-        with torch.no_grad:
-            loss, _ = self.model.forward(
-                x=batch['ppg'],
-                spk_emb=batch['spk_emb'],
-                pitch_target=batch['log_F0'],
-                v_flag=batch['v_flag'],
-                energy_length=batch['energy_len'],
-                mel_target=batch['mel'],
-                mel_mask=batch['mel_mask']
-            )
+        loss, _ = self.model.forward(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_target=batch['mel'],
+            mel_mask=batch['mel_mask']
+        )
 
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
