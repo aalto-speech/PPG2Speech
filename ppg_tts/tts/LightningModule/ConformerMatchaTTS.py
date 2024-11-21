@@ -1,0 +1,172 @@
+import numpy as np
+import os
+import lightning as L
+import torch
+from ...models import ConformerMatchaTTS
+from torch.optim import lr_scheduler as LRScheduler
+from ...utils import plot_mel
+
+class ConformerMatchaTTSModel(L.LightningModule):
+    def __init__(self,
+                 ppg_dim: int,
+                 encode_dim: int,
+                 encode_heads: int,
+                 encode_layers: int,
+                 encode_ffn_dim: int,
+                 encode_kernel_size: int,
+                 spk_emb_size: int,
+                 dropout: float=0.1,
+                 target_dim: int=80,
+                 sigma_min: float=1e-4,
+                 transformer_type: str='conformer',
+                 lr: float=1e-4,
+                 lr_scheduler: str="plateau",
+                 warm_up_steps: int=25000,
+                 gamma: float=0.98,
+                 no_ctc: bool=False,
+                 diff_steps: int=300):
+        super().__init__()
+
+        self.save_hyperparameters()
+
+        self.lr = lr
+        self.lr_scheduler = lr_scheduler
+        self.warm_up_steps = warm_up_steps
+        self.model_size = encode_ffn_dim
+        self.gamma = gamma
+        self.no_ctc = no_ctc
+        self.diffusion_steps = diff_steps
+
+        self.model = ConformerMatchaTTS(
+            ppg_dim=ppg_dim,
+            encode_dim=encode_dim,
+            encode_heads=encode_heads,
+            encode_layers=encode_layers,
+            encode_ffn_dim=encode_ffn_dim,
+            encode_kernel_size=encode_kernel_size,
+            spk_emb_size=spk_emb_size,
+            dropout=dropout,
+            target_dim=target_dim,
+            no_ctc=no_ctc,
+            sigma_min=sigma_min,
+            transformer_type=transformer_type,
+        )
+
+    def training_step(self, batch, batch_idx):
+        loss, _ = self.model.forward(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_target=batch['mel'],
+            mel_mask=batch['mel_mask']
+        )
+        
+        self.log_dict({
+            "train/diffusion_loss": loss,
+        })
+        
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        loss, _ = self.model.forward(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_target=batch['mel'],
+            mel_mask=batch['mel_mask']
+        )
+
+        self.log_dict({
+            "val/diffusion_loss": loss,
+        })
+        
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        loss, _ = self.model.forward(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_target=batch['mel'],
+            mel_mask=batch['mel_mask']
+        )
+
+        self.log_dict({
+            "test/diffusion_loss": loss,
+        })
+        
+        if batch_idx % 70 == 0:
+            mel_figures_path = self.logger.save_dir + "/mel_samples"
+
+            pred_mel = self.model.synthesis(
+                x=batch['ppg'],
+                spk_emb=batch['spk_emb'],
+                pitch_target=batch['log_F0'],
+                v_flag=batch['v_flag'],
+                energy_length=batch['energy_len'],
+                mel_mask=batch['mel_mask'],
+                diff_steps=self.diffusion_steps
+            )
+
+            saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
+
+            plot_mel(saved_mel, path=mel_figures_path, key=batch['keys'][-1])
+        
+        return loss
+
+    def predict_step(self, batch, batch_idx):
+        pred_mel = self.model.synthesis(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_mask=batch['mel_mask'],
+            diff_steps=self.diffusion_steps
+        )
+
+        saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
+
+        mel_save_dir = self.logger.save_dir + "/mel"
+
+        if not os.path.exists(mel_save_dir):
+            os.makedirs(mel_save_dir)
+
+        np.save(f"{mel_save_dir}/{batch['keys'][0]}.npy", saved_mel)
+
+        return pred_mel
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(),
+                                      lr=self.lr)
+        
+        if self.lr_scheduler == 'plateau':
+            lr_scheduler = LRScheduler.ReduceLROnPlateau(
+                optimizer=optimizer,
+                patience=2,
+                factor=0.5
+            )
+        elif self.lr_scheduler == 'noam':
+            schedule_fn = lambda s: \
+                (self.model_size ** -0.5) * \
+                    min((s + 1) ** -0.5, \
+                        (s + 1) * self.warm_up_steps ** -1.5)
+            lr_scheduler = LRScheduler.LambdaLR(optimizer=optimizer,
+                                                 lr_lambda=schedule_fn)
+        elif self.lr_scheduler == 'exponential':
+            lr_scheduler = LRScheduler.ExponentialLR(optimizer=optimizer,
+                                                      gamma=self.gamma)
+        return {"optimizer": optimizer,
+                "lr_scheduler": lr_scheduler,
+                "monitor": "val/mel_loss"}
+    
+    def on_fit_end(self):
+        self.trainer.test(ckpt_path='best',
+                          datamodule=self.trainer.datamodule)
+
