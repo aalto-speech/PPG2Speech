@@ -19,7 +19,7 @@ trainer:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         dirpath: './exp'
-        monitor: 'val/diffusion_loss'
+        monitor: 'val/mel_loss'
         save_top_k: 5
         save_on_train_epoch_end: false
         auto_insert_metric_name: true
