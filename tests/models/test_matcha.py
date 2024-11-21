@@ -2,6 +2,8 @@ import unittest
 import torch
 from ppg_tts.models.matcha.decoder import Decoder
 from ppg_tts.models.matcha.flow_matching import CFM
+from ppg_tts.models.matcha.RoPE import RotaryPositionalEmbeddings
+from ppg_tts.models import ConformerMatchaTTS
 
 class TestDecoderConformer(unittest.TestCase):
     def setUp(self):
@@ -115,8 +117,60 @@ class TestCFM(unittest.TestCase):
         
         self.assertTupleEqual(y.shape, (4, 80, 8))
 
+class TestRoPE(unittest.TestCase):
+    def setUp(self):
+        self.module = RotaryPositionalEmbeddings(d=128)
+        self.x = torch.randn((4, 1, 8, 128))
+
+    def testForward(self):
+        out = self.module(self.x)
+
+        self.assertTupleEqual(out.shape, (4,1,8,128))
+
+class TestConformerMatchaTTS(unittest.TestCase):
+    def setUp(self):
+        self.model = ConformerMatchaTTS(
+            ppg_dim=34,
+            encode_dim=128,
+            encode_heads=4,
+            encode_layers=1,
+            encode_ffn_dim=128,
+            encode_kernel_size=9,
+            spk_emb_size=512,
+        )
+
+        self.x = torch.randn((4, 8, 34))
+        self.spk_emb = torch.randn((4,512))
+        self.pitch = torch.randn((4, 8))
+        self.v_flag = torch.randn((4,8))
+        self.energy_length = torch.LongTensor([
+            4, 5, 6, 8
+        ])
+        self.mel_target = torch.randn((4,8,80))
+        self.mel_mask = torch.FloatTensor([
+            [1,1,1,1,0,0,0,0],
+            [1,1,1,1,1,0,0,0],
+            [1,1,1,1,1,1,0,0],
+            [1,1,1,1,1,1,1,1]
+        ])
+
+    def testForward(self):
+        loss, y = self.model.forward(
+            x=self.x,
+            spk_emb=self.spk_emb,
+            pitch_target=self.pitch,
+            v_flag=self.v_flag,
+            energy_length=self.energy_length,
+            mel_mask=self.mel_mask,
+            mel_target=self.mel_target
+        )
+
+        self.assertTupleEqual(y.shape, (4, 80, 8))
+
 
 if __name__ == "__main__":
     TestDecoderConformer.run()
     TestDecoderTransformer.run()
     TestCFM.run()
+    TestRoPE.run()
+    TestConformerMatchaTTS.run()

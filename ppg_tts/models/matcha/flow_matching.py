@@ -18,7 +18,6 @@ class BASECFM(torch.nn.Module, ABC):
         self.n_feats = n_feats
         self.n_spks = n_spks
         self.spk_emb_dim = spk_emb_dim
-        self.solver = cfm_params['solver']
         if "sigma_min" in cfm_params:
             self.sigma_min = cfm_params['sigma_min']
         else:

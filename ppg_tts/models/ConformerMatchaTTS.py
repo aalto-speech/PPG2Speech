@@ -17,7 +17,8 @@ class ConformerMatchaTTS(nn.Module):
                  dropout: float=0.1,
                  target_dim: int=80,
                  no_ctc: bool=False,
-                 sigma_min: float=1e-4):
+                 sigma_min: float=1e-4,
+                 transformer_type: str='conformer'):
         super(ConformerMatchaTTS, self).__init__()
 
         self.no_ctc = no_ctc
@@ -41,8 +42,15 @@ class ConformerMatchaTTS(nn.Module):
             depthwise_conv_kernel_size=encode_kernel_size
         )
 
+        self.channel_mapping = nn.Sequential(
+            nn.Linear(encode_dim, target_dim),
+            nn.LayerNorm(target_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout)
+        )
+
         self.cfm = CFM(
-            in_channels=encode_dim,
+            in_channels=target_dim,
             out_channel=target_dim,
             n_spks=50,
             cfm_params={
@@ -50,17 +58,21 @@ class ConformerMatchaTTS(nn.Module):
             },
             spk_emb_dim=spk_emb_size,
             decoder_params={
-                'dropout': dropout
+                'dropout': dropout,
+                'down_block_type': transformer_type,
+                'mid_block_type': transformer_type,
+                'up_block_type': transformer_type
             },
         )
 
     def forward(self,
                 x: torch.Tensor,
-                x_length: torch.Tensor,
                 spk_emb: torch.Tensor,
                 pitch_target: torch.Tensor,
                 v_flag: torch.Tensor,
-                energy_length: torch.Tensor):
+                energy_length: torch.Tensor,
+                mel_target: torch.Tensor,
+                mel_mask: torch.Tensor):
         """
         Arguments:
             x: input PPG, shape (B, T_ppg, E)
@@ -68,8 +80,33 @@ class ConformerMatchaTTS(nn.Module):
             pitch_target: shape (B, T_mel)
             v_flag: shape (B, T_mel)
             energy_length: shape (B,)
+            mel_target: shape (B, T, E),
+            mel_mask: shape (B, T), bool tensor
         Returns:
-            prediected_mel: shape (B, T, 80)
+            loss
             refined_mel: shape (B, T, 80)
         """
-        pass
+
+        x = torch.cat([x,
+                       pitch_target.unsqueeze(-1),
+                       v_flag.unsqueeze(-1)
+                       ],
+                      dim=-1)
+        
+        x = self.pre_net(x)
+
+        x_pos_enc = self.rope(x.unsqueeze(1)).squeeze(1)
+
+        x_enc, _ = self.encoder(x_pos_enc, energy_length)
+
+        mu = self.channel_mapping(x_enc)
+
+        loss, y = self.cfm.compute_loss(
+            x1=mel_target.transpose(-1, -2),
+            mu=mu.transpose(-1, -2),
+            mask=mel_mask.unsqueeze(1),
+            spks=spk_emb
+        )
+
+        return loss, y
+
