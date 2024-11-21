@@ -70,49 +70,67 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss, _ = self.model.forward(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_target=batch['mel'],
-            mel_mask=batch['mel_mask']
-        )
-
-        self.log_dict({
-            "val/diffusion_loss": loss,
-        })
-        
-        return loss
-
-    def test_step(self, batch, batch_idx):
-        loss, _ = self.model.forward(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_target=batch['mel'],
-            mel_mask=batch['mel_mask']
-        )
-
-        self.log_dict({
-            "test/diffusion_loss": loss,
-        })
-        
-        if batch_idx % 70 == 0:
-            mel_figures_path = self.logger.save_dir + "/mel_samples"
-
-            pred_mel = self.model.synthesis(
+        with torch.no_grad:
+            loss, _ = self.model.forward(
                 x=batch['ppg'],
                 spk_emb=batch['spk_emb'],
                 pitch_target=batch['log_F0'],
                 v_flag=batch['v_flag'],
                 energy_length=batch['energy_len'],
-                mel_mask=batch['mel_mask'],
-                diff_steps=self.diffusion_steps
+                mel_target=batch['mel'],
+                mel_mask=batch['mel_mask']
             )
+
+        pred_mel = self.model.synthesis(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_mask=batch['mel_mask'],
+            diff_steps=self.diffusion_steps
+        )
+
+        mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
+
+        self.log_dict({
+            "val/diffusion_loss": loss,
+            "val/mel_loss": mel_loss
+        })
+        
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        with torch.no_grad:
+            loss, _ = self.model.forward(
+                x=batch['ppg'],
+                spk_emb=batch['spk_emb'],
+                pitch_target=batch['log_F0'],
+                v_flag=batch['v_flag'],
+                energy_length=batch['energy_len'],
+                mel_target=batch['mel'],
+                mel_mask=batch['mel_mask']
+            )
+
+        pred_mel = self.model.synthesis(
+            x=batch['ppg'],
+            spk_emb=batch['spk_emb'],
+            pitch_target=batch['log_F0'],
+            v_flag=batch['v_flag'],
+            energy_length=batch['energy_len'],
+            mel_mask=batch['mel_mask'],
+            diff_steps=self.diffusion_steps
+        )
+
+        mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
+
+        self.log_dict({
+            "test/diffusion_loss": loss,
+            "test/mel_loss": mel_loss
+        })
+        
+        if batch_idx % 70 == 0:
+            mel_figures_path = self.logger.save_dir + "/mel_samples"
 
             saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
 
