@@ -79,10 +79,11 @@ class ConformerTTSModel(L.LightningModule):
         )
 
         mel_mask = batch['mel_mask'].unsqueeze(-1)
-        pred_mel.masked_fill_(mel_mask, 0.0)
+        cp_pred_mel = torch.clone(pred_mel)
+        cp_pred_mel.masked_fill_(mel_mask, 0.0)
         refined_mel.masked_fill_(mel_mask, 0.0)
 
-        l_mel = self.mel_loss(pred_mel, batch["mel"].masked_fill_(mel_mask, 0.0)) \
+        l_mel = self.mel_loss(cp_pred_mel, batch["mel"].masked_fill_(mel_mask, 0.0)) \
             + self.mel_loss(refined_mel, batch['mel'].masked_fill_(mel_mask, 0.0))
         
         if self.rmse and isinstance(self.mel_loss, torch.nn.MSELoss):

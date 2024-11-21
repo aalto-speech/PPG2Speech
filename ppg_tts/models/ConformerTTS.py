@@ -96,15 +96,15 @@ class ConformerTTS(nn.Module):
         # z, predicted_pitch, predicted_energy = \
         #     self.variance_adapter(z, mel_mask, pitch_target, energy_target)
         
-        z = torch.cat([
+        z_dec = torch.cat([
             z,
             encoded_spk_emb.unsqueeze(1).repeat(1, z.size(1), 1)
             ],
             dim=-1)
         
-        z, z_length = self.conformer_dec(z, z_length)
+        before_pred, _ = self.conformer_dec(z_dec, z_length)
         
-        predicted_mel = self.pred_net(z)
+        predicted_mel = self.pred_net(before_pred)
         
         post_mel = self.post_net(predicted_mel.transpose(-1, -2))
 
