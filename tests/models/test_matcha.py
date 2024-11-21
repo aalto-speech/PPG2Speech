@@ -71,8 +71,52 @@ class TestDecoderTransformer(unittest.TestCase):
 
 class TestCFM(unittest.TestCase):
     def setUp(self):
-        return super().setUp()
+        self.model = CFM(
+            in_channels=80,
+            out_channel=80,
+            n_spks=50,
+            spk_emb_dim=512,
+            cfm_params={
+                'solver': None,
+                'sigma_min': 1e-3
+            },
+            decoder_params={
+                'down_block_type': 'conformer',
+                'mid_block_type': 'conformer',
+                'up_block_type': 'conformer'
+            },
+        )
+
+        self.mu = torch.randn((4, 80, 8))
+        self.mask = torch.FloatTensor([
+            [1,1,1,1,0,0,0,0],
+            [1,1,1,1,1,0,0,0],
+            [1,1,1,1,1,1,1,0],
+            [1,1,1,1,1,1,1,1]
+        ]).unsqueeze(1)
+
+        self.n_timesteps = 10
+        self.spk_emb = torch.randn((4, 512))
+        self.target = torch.randn((4, 80, 8))
+
+    def testForward(self):
+        output = self.model.forward(self.mu,
+                                    self.mask,
+                                    self.n_timesteps,
+                                    spks=self.spk_emb)
+        
+        self.assertTupleEqual(output.shape, (4, 80, 8))
+
+    def testComputeLoss(self):
+        loss, y = self.model.compute_loss(self.target,
+                                          self.mask,
+                                          self.mu,
+                                          self.spk_emb)
+        
+        self.assertTupleEqual(y.shape, (4, 80, 8))
+
 
 if __name__ == "__main__":
     TestDecoderConformer.run()
     TestDecoderTransformer.run()
+    TestCFM.run()

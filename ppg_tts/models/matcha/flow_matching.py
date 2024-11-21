@@ -18,9 +18,9 @@ class BASECFM(torch.nn.Module, ABC):
         self.n_feats = n_feats
         self.n_spks = n_spks
         self.spk_emb_dim = spk_emb_dim
-        self.solver = cfm_params.solver
-        if hasattr(cfm_params, "sigma_min"):
-            self.sigma_min = cfm_params.sigma_min
+        self.solver = cfm_params['solver']
+        if "sigma_min" in cfm_params:
+            self.sigma_min = cfm_params['sigma_min']
         else:
             self.sigma_min = 1e-4
 
@@ -124,6 +124,6 @@ class CFM(BASECFM):
             spk_emb_dim=spk_emb_dim,
         )
 
-        in_channels = in_channels + (spk_emb_dim if n_spks > 1 else 0)
+        in_channels = in_channels * 2 + (spk_emb_dim if n_spks > 1 else 0)
         # Just change the architecture of the estimator here
         self.estimator = Decoder(in_channels=in_channels, out_channels=out_channel, **decoder_params)
