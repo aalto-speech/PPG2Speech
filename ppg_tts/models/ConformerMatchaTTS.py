@@ -109,4 +109,48 @@ class ConformerMatchaTTS(nn.Module):
         )
 
         return loss, y
+    
+    @torch.inference_mode()
+    def synthesis(self,
+                  x: torch.Tensor,
+                  spk_emb: torch.Tensor,
+                  pitch_target: torch.Tensor,
+                  v_flag: torch.Tensor,
+                  energy_length: torch.Tensor,
+                  mel_mask: torch.Tensor,
+                  diff_steps: int=300):
+        """
+        Arguments:
+            x: input PPG, shape (B, T_ppg, E)
+            spk_emb: speaker_embedding, shape (B, E_spk)
+            pitch_target: shape (B, T_mel)
+            v_flag: shape (B, T_mel)
+            energy_length: shape (B,)
+            mel_target: shape (B, T, E),
+            mel_mask: shape (B, T), bool tensor
+        Returns:
+            pred_mel: shape (B, T, 80)
+        """
 
+        x = torch.cat([x,
+                       pitch_target.unsqueeze(-1),
+                       v_flag.unsqueeze(-1)
+                       ],
+                      dim=-1)
+        
+        x = self.pre_net(x)
+
+        x_pos_enc = self.rope(x.unsqueeze(1)).squeeze(1)
+
+        x_enc, _ = self.encoder(x_pos_enc, energy_length)
+
+        mu = self.channel_mapping(x_enc)
+
+        pred_mel = self.cfm.forward(
+            mu=mu.transpose(-1, -2),
+            mask=mel_mask.unsqueeze(1),
+            n_timesteps=diff_steps,
+            spks=spk_emb
+        )
+
+        return pred_mel.transpose(-1, -2)

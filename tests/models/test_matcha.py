@@ -167,6 +167,19 @@ class TestConformerMatchaTTS(unittest.TestCase):
 
         self.assertTupleEqual(y.shape, (4, 80, 8))
 
+    def testSynthesis(self):
+        mel = self.model.synthesis(
+            x=self.x,
+            spk_emb=self.spk_emb,
+            pitch_target=self.pitch,
+            v_flag=self.v_flag,
+            energy_length=self.energy_length,
+            mel_mask=self.mel_mask,
+            diff_steps=10
+        )
+
+        self.assertTupleEqual(mel.shape, (4, 8, 80))
+
 
 if __name__ == "__main__":
     TestDecoderConformer.run()
