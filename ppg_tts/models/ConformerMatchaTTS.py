@@ -14,6 +14,8 @@ class ConformerMatchaTTS(nn.Module):
                  encode_ffn_dim: int,
                  encode_kernel_size: int,
                  spk_emb_size: int,
+                 decoder_num_mid_block: int,
+                 decoder_num_block: int,
                  dropout: float=0.1,
                  target_dim: int=80,
                  no_ctc: bool=False,
@@ -61,7 +63,9 @@ class ConformerMatchaTTS(nn.Module):
                 'dropout': dropout,
                 'down_block_type': transformer_type,
                 'mid_block_type': transformer_type,
-                'up_block_type': transformer_type
+                'up_block_type': transformer_type,
+                'n_blocks': decoder_num_block,
+                'num_mid_blocks': decoder_num_mid_block,
             },
         )
 

@@ -15,6 +15,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  encode_ffn_dim: int,
                  encode_kernel_size: int,
                  spk_emb_size: int,
+                 decoder_num_block: int=1,
+                 decoder_num_mid_block: int=2,
                  dropout: float=0.1,
                  target_dim: int=80,
                  sigma_min: float=1e-4,
@@ -52,6 +54,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
             no_ctc=no_ctc,
             sigma_min=sigma_min,
             transformer_type=transformer_type,
+            decoder_num_block=decoder_num_block,
+            decoder_num_mid_block=decoder_num_mid_block,
         )
 
     def training_step(self, batch, batch_idx):
