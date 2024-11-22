@@ -70,15 +70,15 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss, _ = self.model.forward(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_target=batch['mel'],
-            mel_mask=batch['mel_mask']
-        )
+        # loss, _ = self.model.forward(
+        #     x=batch['ppg'],
+        #     spk_emb=batch['spk_emb'],
+        #     pitch_target=batch['log_F0'],
+        #     v_flag=batch['v_flag'],
+        #     energy_length=batch['energy_len'],
+        #     mel_target=batch['mel'],
+        #     mel_mask=batch['mel_mask']
+        # )
 
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
@@ -93,22 +93,22 @@ class ConformerMatchaTTSModel(L.LightningModule):
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
 
         self.log_dict({
-            "val/diffusion_loss": loss,
+            # "val/diffusion_loss": loss,
             "val/mel_loss": mel_loss
         })
         
-        return loss
+        return mel_loss
 
     def test_step(self, batch, batch_idx):
-        loss, _ = self.model.forward(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_target=batch['mel'],
-            mel_mask=batch['mel_mask']
-        )
+        # loss, _ = self.model.forward(
+        #     x=batch['ppg'],
+        #     spk_emb=batch['spk_emb'],
+        #     pitch_target=batch['log_F0'],
+        #     v_flag=batch['v_flag'],
+        #     energy_length=batch['energy_len'],
+        #     mel_target=batch['mel'],
+        #     mel_mask=batch['mel_mask']
+        # )
 
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
@@ -123,7 +123,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
 
         self.log_dict({
-            "test/diffusion_loss": loss,
+            # "test/diffusion_loss": loss,
             "test/mel_loss": mel_loss
         })
         
@@ -134,7 +134,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
 
             plot_mel(saved_mel, path=mel_figures_path, key=batch['keys'][-1])
         
-        return loss
+        return mel_loss
 
     def predict_step(self, batch, batch_idx):
         pred_mel = self.model.synthesis(
