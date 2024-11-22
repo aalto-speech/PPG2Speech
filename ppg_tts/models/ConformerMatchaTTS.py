@@ -146,7 +146,8 @@ class ConformerMatchaTTS(nn.Module):
                   v_flag: torch.Tensor,
                   energy_length: torch.Tensor,
                   mel_mask: torch.Tensor,
-                  diff_steps: int=300):
+                  diff_steps: int=300,
+                  temperature: float=0.667):
         """
         Arguments:
             x: input PPG, shape (B, T_ppg, E)
@@ -185,7 +186,8 @@ class ConformerMatchaTTS(nn.Module):
             mu=mu.transpose(-1, -2),
             mask=~mel_mask.unsqueeze(1),
             n_timesteps=diff_steps,
-            spks=spk_emb
+            spks=spk_emb,
+            temperature=temperature
         )
 
         if pad_to_odd:

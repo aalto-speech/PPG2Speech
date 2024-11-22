@@ -24,7 +24,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  warm_up_steps: int=25000,
                  gamma: float=0.98,
                  no_ctc: bool=False,
-                 diff_steps: int=300):
+                 diff_steps: int=300,
+                 temperature: float=0.667):
         super().__init__()
 
         self.save_hyperparameters()
@@ -36,6 +37,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.gamma = gamma
         self.no_ctc = no_ctc
         self.diffusion_steps = diff_steps
+        self.temperature = temperature
 
         self.model = ConformerMatchaTTS(
             ppg_dim=ppg_dim,
@@ -87,7 +89,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
             v_flag=batch['v_flag'],
             energy_length=batch['energy_len'],
             mel_mask=batch['mel_mask'],
-            diff_steps=self.diffusion_steps
+            diff_steps=self.diffusion_steps,
+            temperature=self.temperature
         )
 
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
@@ -117,7 +120,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
             v_flag=batch['v_flag'],
             energy_length=batch['energy_len'],
             mel_mask=batch['mel_mask'],
-            diff_steps=self.diffusion_steps
+            diff_steps=self.diffusion_steps,
+            temperature=self.temperature
         )
 
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
@@ -144,7 +148,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
             v_flag=batch['v_flag'],
             energy_length=batch['energy_len'],
             mel_mask=batch['mel_mask'],
-            diff_steps=self.diffusion_steps
+            diff_steps=self.diffusion_steps,
+            temperature=self.temperature
         )
 
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
