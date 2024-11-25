@@ -9,7 +9,7 @@ from torch.nn.functional import interpolate
 
 class VCTKBase(Dataset):
     def __init__(self, data_dir: str, target_sr: int=22050):
-        super(VCTKBase).__init__()
+        super().__init__()
         self.target_sr = target_sr
         with open(f"{data_dir}/wav.scp", "r") as reader:
             wavlist = reader.readlines()
@@ -42,9 +42,9 @@ class VCTKBase(Dataset):
         return key, wav, sr
 
 
-class VCTKExtend(Dataset, VCTKBase):
+class VCTKExtend(VCTKBase):
     def __init__(self, data_dir: str, target_sr: int=22050, no_ctc: bool=True):
-        super(VCTKExtend).__init__(data_dir, target_sr)
+        super().__init__(data_dir, target_sr)
         self.no_ctc = no_ctc
         
         self.ppg_path = Path(data_dir, "ppg_no_ctc.scp")
@@ -139,7 +139,4 @@ class VCTKExtend(Dataset, VCTKBase):
         x_interpolated = x_interpolated.permute(0, 2, 1).squeeze(0)
 
         return x_interpolated
-    
-    def __len__(self):
-        return len(self.base_dataset)
         

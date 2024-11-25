@@ -25,6 +25,8 @@ for speaker in "$VCTK_PATH"/*/; do
     if [[ "$speaker_id" == "p280" || "$speaker_id" == "p362" ]]; then
         continue
     fi
+
+    echo "Processing speaker ${speaker_id}"
     
     # Find all mic2 audio files for the current speaker
     mic2_files=($(find "$speaker" -type f -name "*mic2*"))

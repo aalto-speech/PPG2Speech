@@ -19,7 +19,7 @@ if __name__ == "__main__":
             for d in dataset:
                 if args.dataset == 'perso':
                     key, f0, v_flag = extract_f0_from_utterance(d)
-                elif args.datset == 'vctk':
+                elif args.dataset == 'vctk':
                     key = d[0]
                     _, f0, v_flag = extract_f0_from_utterance({'feature': d[1],
                                                                'key': key})

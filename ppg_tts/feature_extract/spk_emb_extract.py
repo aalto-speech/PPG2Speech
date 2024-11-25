@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     logger.info(f"Extracting Speaker Embedding to {args.data_dir}, in total {len(dataset)} utterances.")
 
-    with WriteHelper(f"ark,scp:{args.data_dir}/embedding.ark,{args.data_dir}/embedding.scp") as writer:
+    with WriteHelper(f"ark,scp,f:{args.data_dir}/embedding.ark,{args.data_dir}/embedding.scp") as writer:
         try:
             for i, utterance in enumerate(dataset):
                 if args.dataset == 'perso':

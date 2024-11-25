@@ -22,7 +22,7 @@ if __name__ == "__main__":
     logger.info(f"Extracting PPG to {args.data_dir}, in total {len(dataset)} utterances.")
 
     flag = "_no_ctc" if args.no_ctc else ""
-    with WriteHelper(f"ark,scp:{args.data_dir}/ppg{flag}.ark,{args.data_dir}/ppg{flag}.scp") as writer:
+    with WriteHelper(f"ark,scp,f:{args.data_dir}/ppg{flag}.ark,{args.data_dir}/ppg{flag}.scp") as writer:
         try:
             for i, utterance in enumerate(dataset):
                 if args.dataset == 'perso':
