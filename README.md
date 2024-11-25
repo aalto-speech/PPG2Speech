@@ -62,4 +62,7 @@ Put BigVGAN in a separate folder and soft link it back to vocoder folder.
 ## 2024.11.12
 Add following modules for better mel:
 - [x] postnet like Tacotron 2 (https://speechbrain.readthedocs.io/en/latest/API/speechbrain.lobes.models.Tacotron2.html#speechbrain.lobes.models.Tacotron2.Postnet)
-- [ ] adversarial training, train mel classifier after mel generator converges
+
+## 2024.11.25
+- [x] add vctk to the dataset (Not tested)
+- [ ] add LibriTTS-R to the dataset
