@@ -35,9 +35,9 @@ class MixDataModule(L.LightningDataModule):
 
         if 'librittsr' in data_dirs:
             self.librittsr = True
-            self.librittsr_train_dir = Path(data_dirs['librittsr']) / 'train'
-            self.librittsr_val_dir = Path(data_dirs['librittsr']) / 'val'
-            self.librittsr_test_dir = Path(data_dirs['librittsr']) / 'test'
+            self.librittsr_train_dir = Path(data_dirs['librittsr']) / 'train-clean-100'
+            self.librittsr_val_dir = Path(data_dirs['librittsr']) / 'dev-clean'
+            self.librittsr_test_dir = Path(data_dirs['librittsr']) / 'test-clean'
 
     def setup(self, stage):
         if stage == 'fit':
