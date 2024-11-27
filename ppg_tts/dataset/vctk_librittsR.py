@@ -42,7 +42,7 @@ class VCTKLibriTTSRBase(Dataset):
         return key, wav, sr
 
 
-class VCTKLibriTTSRExtend(VCTKBase):
+class VCTKLibriTTSRExtend(VCTKLibriTTSRBase):
     def __init__(self, data_dir: str, target_sr: int=22050, no_ctc: bool=True):
         super().__init__(data_dir, target_sr)
         self.no_ctc = no_ctc
