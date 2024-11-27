@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from kaldiio import ReadHelper
 from torch.nn.functional import interpolate
 
-class VCTKBase(Dataset):
+class VCTKLibriTTSRBase(Dataset):
     def __init__(self, data_dir: str, target_sr: int=22050):
         super().__init__()
         self.target_sr = target_sr
@@ -42,7 +42,7 @@ class VCTKBase(Dataset):
         return key, wav, sr
 
 
-class VCTKExtend(VCTKBase):
+class VCTKLibriTTSRExtend(VCTKBase):
     def __init__(self, data_dir: str, target_sr: int=22050, no_ctc: bool=True):
         super().__init__(data_dir, target_sr)
         self.no_ctc = no_ctc

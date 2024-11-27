@@ -1,2 +1,2 @@
 from .perso import  PersoDatasetBasic, PersoDatasetWithConditions, PersoCollateFn
-from .vctk import VCTKBase, VCTKExtend
+from .vctk_librittsR import VCTKLibriTTSRBase, VCTKLibriTTSRExtend

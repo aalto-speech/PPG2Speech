@@ -1,9 +1,9 @@
 import lightning as L
 from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
-from ...dataset import PersoCollateFn, VCTKExtend
+from ...dataset import PersoCollateFn, VCTKLibriTTSRExtend
 
-class vctkDataModule(L.LightningDataModule):
+class VctkLibriTTSRDataModule(L.LightningDataModule):
     def __init__(self, 
                  data_dir: str="./data",
                  batch_size: int=16,
@@ -18,10 +18,10 @@ class vctkDataModule(L.LightningDataModule):
 
     def setup(self, stage: str):
         if stage == 'fit':
-            self.train = VCTKExtend(data_dir=self.train_dir, no_ctc=self.no_ctc)
-            self.val = VCTKExtend(data_dir=self.val_dir, no_ctc=self.no_ctc)
+            self.train = VCTKLibriTTSRExtend(data_dir=self.train_dir, no_ctc=self.no_ctc)
+            self.val = VCTKLibriTTSRExtend(data_dir=self.val_dir, no_ctc=self.no_ctc)
         elif stage == 'test' or stage == 'predict':
-            self.test = VCTKExtend(data_dir=self.test_dir, no_ctc=self.no_ctc)
+            self.test = VCTKLibriTTSRExtend(data_dir=self.test_dir, no_ctc=self.no_ctc)
 
     def train_dataloader(self):
         return DataLoader(self.train,

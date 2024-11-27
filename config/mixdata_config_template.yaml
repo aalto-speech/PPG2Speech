@@ -4,5 +4,6 @@ data:
     data_dirs:
       perso:
       vctk:
+      librittsr:
     batch_size: 16
     no_ctc: false
