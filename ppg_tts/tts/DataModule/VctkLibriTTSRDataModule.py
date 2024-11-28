@@ -16,6 +16,9 @@ class VctkDataModule(L.LightningDataModule):
         self.batch_size = batch_size
         self.no_ctc = no_ctc
 
+        from loguru import logger
+        logger.info(f"\nTraining dir: {self.train_dir}\nVal dir: {self.val_dir}\nTest_dir: {self.test_dir}")
+
     def setup(self, stage: str):
         if stage == 'fit':
             self.train = VCTKLibriTTSRExtend(data_dir=self.train_dir, no_ctc=self.no_ctc)
