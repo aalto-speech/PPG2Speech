@@ -1,14 +1,11 @@
 import librosa
 from loguru import logger
 from ..utils import build_parser, extract_f0_from_utterance
-from ..dataset import PersoDatasetBasic
 from kaldiio import WriteHelper
 
 if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
-
-    # dataset = PersoDatasetBasic(args.data_dir)
 
     jid = int(args.jobid)
 
