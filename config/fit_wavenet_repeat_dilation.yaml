@@ -94,10 +94,6 @@ model:
     no_ctc: false
     rmse: false
     causal: false
-data:
-  data_dir: ./data
-  batch_size: 16
-  no_ctc: false
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

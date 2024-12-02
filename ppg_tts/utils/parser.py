@@ -3,8 +3,10 @@ import argparse
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Argument parser for PPG and Speaker Embedding extraction.\
                                       TTS training will use Pytorch-lightning CLI.")
+    parser.add_argument("--dataset",
+                        help="The dataset used")
     parser.add_argument("--data_dir", 
-                        help="The data directory for Perso Dataset. Should contains wav.scp and text.",
+                        help="The data directory for Dataset. Should contains wav.scp and text for Perso. Download location for VCTK.",
                         default="./data")
     parser.add_argument("--auth_token",
                         help="The authorisation token for using Pyannote Embedding model.")
