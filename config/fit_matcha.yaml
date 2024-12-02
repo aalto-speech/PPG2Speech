@@ -73,10 +73,10 @@ model:
     lr: 1e-4
     lr_scheduler: exponential
     warm_up_steps: 25000
-    gamma: 0.98
+    gamma: 0.99
     no_ctc: false
-    diff_steps: 300
-    transformer_type: conformer
+    diff_steps: 10
+    transformer_type: transformer
     temperature: 0.667
 optimizer: null
 lr_scheduler: null
