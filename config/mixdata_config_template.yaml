@@ -1,9 +1,14 @@
 data:
-  class_path: ppg_tts.tts.DataModule.MixDataModule
+  class_path: ppg_tts.tts.DataModule.BasicDataModule
   init_args:
-    data_dirs:
-      perso: ./data
-      vctk: /scratch/elec/t412-speechsynth/DATA/vctk_split/vctk_split
-      librittsr: /scratch/elec/t412-speechsynth/DATA/LibriTTS-R/LibriTTS_R
+    data_dir: /scratch/elec/t412-speechsynth/DATA/mix_perso_vctk_librittsr
     batch_size: 16
     no_ctc: true
+  # class_path: ppg_tts.tts.DataModule.MixDataModule
+  # init_args:
+  #   data_dirs:
+  #     perso: ./data
+  #     vctk: /scratch/elec/t412-speechsynth/DATA/vctk_split/vctk_split
+  #     librittsr: /scratch/elec/t412-speechsynth/DATA/LibriTTS-R/LibriTTS_R
+  #   batch_size: 16
+  #   no_ctc: true

@@ -3,6 +3,7 @@ from loguru import logger
 from typing import Dict
 from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
+from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from ...dataset import PersoCollateFn, VCTKLibriTTSRExtend, PersoDatasetWithConditions
 
 class MixDataModule(L.LightningDataModule):
@@ -14,8 +15,6 @@ class MixDataModule(L.LightningDataModule):
         self.data_dirs = data_dirs
         self.no_ctc = no_ctc
         self.batch_size = batch_size
-
-        logger.info("Only support perso + vctk mix dataset.")
 
         self.perso = False
         self.vctk = False
@@ -86,7 +85,7 @@ class MixDataModule(L.LightningDataModule):
                            num_workers=8,
                            collate_fn=PersoCollateFn)
             )
-        return dataloader_lst
+        return CombinedLoader(dataloader_lst, mode='max_size_cycle')
     
     def val_dataloader(self):
         dataloader_lst = []
@@ -113,7 +112,7 @@ class MixDataModule(L.LightningDataModule):
                            num_workers=8,
                            collate_fn=PersoCollateFn)
             )
-        return dataloader_lst
+        return CombinedLoader(dataloader_lst, mode='max_size_cycle')
     
     def test_dataloader(self):
         dataloader_lst = []
@@ -140,7 +139,7 @@ class MixDataModule(L.LightningDataModule):
                            num_workers=4,
                            collate_fn=PersoCollateFn)
             )
-        return dataloader_lst
+        return CombinedLoader(dataloader_lst, mode='max_size_cycle')
     
     def predict_dataloader(self):
         return self.test_dataloader()

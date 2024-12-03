@@ -11,6 +11,7 @@ class VCTKLibriTTSRBase(Dataset):
     def __init__(self, data_dir: str, target_sr: int=22050):
         super().__init__()
         self.target_sr = target_sr
+        logger.info(f"Reading dataset from {data_dir}")
         with open(f"{data_dir}/wav.scp", "r") as reader:
             wavlist = reader.readlines()
         

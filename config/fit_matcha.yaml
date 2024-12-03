@@ -26,9 +26,9 @@ trainer:
         mode: 'min'
         save_last: true
   fast_dev_run: false
-  max_epochs: 80
+  max_epochs: -1
   min_epochs: 20
-  max_steps: -1
+  max_steps: 500000
   min_steps: null
   max_time: null
   limit_train_batches: null

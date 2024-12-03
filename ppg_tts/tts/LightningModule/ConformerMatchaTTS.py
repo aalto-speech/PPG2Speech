@@ -58,7 +58,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             decoder_num_mid_block=decoder_num_mid_block,
         )
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, dataloader_idx=0):
         loss, _ = self.model.forward(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
@@ -75,7 +75,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
@@ -96,7 +96,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         
         return mel_loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
         
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
@@ -124,7 +124,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         
         return mel_loss
 
-    def predict_step(self, batch, batch_idx):
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
         pred_mel = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],

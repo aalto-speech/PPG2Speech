@@ -3,7 +3,7 @@ from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
 from ...dataset import PersoCollateFn, VCTKLibriTTSRExtend
 
-class VctkDataModule(L.LightningDataModule):
+class BasicDataModule(L.LightningDataModule):
     def __init__(self, 
                  data_dir: str="./data",
                  batch_size: int=16,
@@ -50,7 +50,7 @@ class VctkDataModule(L.LightningDataModule):
                           num_workers=4,
                           collate_fn=PersoCollateFn)
 
-class LibriTTSRDataModule(VctkDataModule):
+class LibriTTSRDataModule(BasicDataModule):
     def __init__(self, 
                  data_dir: str="./data",
                  batch_size: int=16,
