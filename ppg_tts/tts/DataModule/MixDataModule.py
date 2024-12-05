@@ -4,7 +4,7 @@ from typing import Dict
 from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
 from lightning.pytorch.utilities.combined_loader import CombinedLoader
-from ...dataset import PersoCollateFn, VCTKLibriTTSRExtend, PersoDatasetWithConditions
+from ...dataset import PersoCollateFn, ExtendDataset, PersoDatasetWithConditions
 
 class MixDataModule(L.LightningDataModule):
     def __init__(self, 
@@ -45,20 +45,20 @@ class MixDataModule(L.LightningDataModule):
                 self.perso_val = PersoDatasetWithConditions(self.perso_val_dir, self.no_ctc)
 
             if self.vctk:
-                self.vctk_train = VCTKLibriTTSRExtend(data_dir=self.vctk_train_dir, no_ctc=self.no_ctc)
-                self.vctk_val = VCTKLibriTTSRExtend(data_dir=self.vctk_val_dir, no_ctc=self.no_ctc)
+                self.vctk_train = ExtendDataset(data_dir=self.vctk_train_dir, no_ctc=self.no_ctc)
+                self.vctk_val = ExtendDataset(data_dir=self.vctk_val_dir, no_ctc=self.no_ctc)
 
             if self.librittsr:
-                self.librittsr_train = VCTKLibriTTSRExtend(data_dir=self.librittsr_train_dir, no_ctc=self.no_ctc)
-                self.librittsr_val = VCTKLibriTTSRExtend(data_dir=self.librittsr_val_dir, no_ctc=self.no_ctc)
+                self.librittsr_train = ExtendDataset(data_dir=self.librittsr_train_dir, no_ctc=self.no_ctc)
+                self.librittsr_val = ExtendDataset(data_dir=self.librittsr_val_dir, no_ctc=self.no_ctc)
         
         elif stage == 'test' or stage == 'predict':
             if self.vctk:
-                self.vctk_test = VCTKLibriTTSRExtend(data_dir=self.vctk_test_dir, no_ctc=self.no_ctc)
+                self.vctk_test = ExtendDataset(data_dir=self.vctk_test_dir, no_ctc=self.no_ctc)
             if self.perso:
                 self.perso_test = PersoDatasetWithConditions(self.perso_test_dir, self.no_ctc)
             if self.librittsr:
-                self.librittsr_test = VCTKLibriTTSRExtend(data_dir=self.librittsr_test_dir, no_ctc=self.no_ctc)
+                self.librittsr_test = ExtendDataset(data_dir=self.librittsr_test_dir, no_ctc=self.no_ctc)
     
     def train_dataloader(self):
         dataloader_lst = []

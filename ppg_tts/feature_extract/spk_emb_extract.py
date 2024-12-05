@@ -1,5 +1,5 @@
 from ..utils import build_parser
-from ..dataset import PersoDatasetBasic, VCTKLibriTTSRBase
+from ..dataset import PersoDatasetBasic, BaseDataset
 from ..models import SpeakerEmbeddingPretrained
 from loguru import logger
 from kaldiio import WriteHelper
@@ -10,10 +10,8 @@ if __name__ == "__main__":
 
     if args.dataset == 'perso':
         dataset = PersoDatasetBasic(args.data_dir)
-    elif args.dataset == 'vctk' or args.dataset == 'librittsr':
-        dataset = VCTKLibriTTSRBase(data_dir=args.data_dir)
     else:
-        raise ValueError(f"Currently dataset {args.dataset} is not supported")
+        dataset = BaseDataset(data_dir=args.data_dir)
 
     SpEmModel = SpeakerEmbeddingPretrained(args.auth_token, args.device)
 
@@ -24,13 +22,13 @@ if __name__ == "__main__":
             for i, utterance in enumerate(dataset):
                 if args.dataset == 'perso':
                     wav = utterance["feature"]
-                elif args.dataset == 'vctk' or args.dataset == 'librittsr':
+                else:
                     wav = utterance[1]
                 emb = SpEmModel.forward(wav)
 
                 if args.dataset == 'perso':
                     key = utterance["key"]
-                elif args.dataset == 'vctk' or args.dataset == 'librittsr':
+                else:
                     key = utterance[0]
                 writer(key, emb)
                 logger.info(f"{key}: wav length {wav.size(-1)}, emb shape {emb.shape}")
