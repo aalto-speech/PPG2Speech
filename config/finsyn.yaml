@@ -1,0 +1,6 @@
+data:
+  class_path: ppg_tts.tts.DataModule.BasicDataModule
+  init_args:
+    data_dir: /scratch/elec/t412-speechsynth/DATA/finsyn_data
+    batch_size: 16
+    no_ctc: true
