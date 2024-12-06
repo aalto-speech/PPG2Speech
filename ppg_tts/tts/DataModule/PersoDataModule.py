@@ -1,4 +1,5 @@
 import lightning as L
+from loguru import logger
 from pathlib import Path
 from torch.utils.data.dataloader import DataLoader
 from ...dataset import PersoDatasetWithConditions, PersoCollateFn
@@ -9,6 +10,7 @@ class PersoDataModule(L.LightningDataModule):
                  batch_size: int=16,
                  no_ctc: bool=False):
         super().__init__()
+        logger.warning(f"{self.__class__.__name__} is deprecated. Please use BasicDataModule for Perso instead.")
         self.data_dir = data_dir
         self.train_dir = Path(data_dir) / "train"
         self.val_dir = Path(data_dir) / "val"
