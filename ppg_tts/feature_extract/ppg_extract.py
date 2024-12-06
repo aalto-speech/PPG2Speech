@@ -1,7 +1,7 @@
 import torchaudio
 from ..utils import build_parser
 from ..dataset import PersoDatasetBasic, BaseDataset
-from ..models import PPGFromWav2Vec2Pretrained, PPGFromWav2Vec2PretrainedNoCTC
+from ..models import PPGFromWav2Vec2Pretrained
 from loguru import logger
 from kaldiio import WriteHelper
 
@@ -14,10 +14,8 @@ if __name__ == "__main__":
         dataset = PersoDatasetBasic(args.data_dir, 16000)
     else:
         dataset = BaseDataset(args.data_dir, 16000)
-    if not args.no_ctc:
-        ASRModel = PPGFromWav2Vec2Pretrained(args.asr_pretrained)
-    else:
-        ASRModel = PPGFromWav2Vec2PretrainedNoCTC(args.asr_pretrained)
+    
+    ASRModel = PPGFromWav2Vec2Pretrained(args.asr_pretrained, no_ctc=args.no_ctc)
 
     logger.info(f"Extracting PPG to {args.data_dir}, in total {len(dataset)} utterances.")
 
