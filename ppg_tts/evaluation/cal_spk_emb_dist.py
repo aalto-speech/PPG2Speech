@@ -1,3 +1,4 @@
+import torch
 import torchaudio
 from loguru import logger
 from torch.nn import CosineSimilarity
@@ -30,7 +31,8 @@ if __name__ == "__main__":
         source_spk_emb = SpEmModel.forward(source_wav, source_sr)
         target_spk_emb = SpEmModel.forward(target_wav, target_sr)
 
-        similarity = cos(source_spk_emb, target_spk_emb)
+        with torch.no_grad():
+            similarity = cos(source_spk_emb, target_spk_emb)
 
         avg_simi += similarity.detach().cpu().item()
 
