@@ -3,6 +3,7 @@ from pyannote.audio import Inference
 from loguru import logger
 import torch
 import torch.nn.functional as f
+import numpy as np
 
 class SpeakerEmbeddingPretrained:
     def __init__(self, auth_token: str, device: str):
@@ -13,9 +14,9 @@ class SpeakerEmbeddingPretrained:
 
         self.inference.to(torch.device(device))
 
-    def forward(self, waveform_in_memory: torch.Tensor) -> torch.Tensor:
-        len_pad = 16000 * 5 - waveform_in_memory.size(-1)
+    def forward(self, waveform_in_memory: torch.Tensor, sr: int=22050) -> np.ndarray:
+        len_pad = sr * 5 - waveform_in_memory.size(-1)
         if len_pad > 0:
             waveform_in_memory = f.pad(waveform_in_memory, [0, len_pad], mode='constant', value=0.0)
-        return self.inference({"waveform": waveform_in_memory, "sample_rate": 16000})
+        return self.inference({"waveform": waveform_in_memory, "sample_rate": sr})
     

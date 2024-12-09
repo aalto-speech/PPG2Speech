@@ -21,4 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
                         action="store_true")
     parser.add_argument("--jobid",
                         help="jobid in pitch extraction")
+    parser.add_argument("--ckpt",
+                        help="ckpt path for the TTS/VC model.")
+    parser.add_argument("--flip_wav_dir",
+                        help="the wav directory for flipped generation")
     return parser

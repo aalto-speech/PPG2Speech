@@ -17,11 +17,13 @@ class BaseDataset(Dataset):
         
         self.key2wav = {}
         self.idx2key = {}
+        self.key2idx = {}
         for i, item in enumerate(wavlist):
             key, path = item.split(" ")
             path = path.strip(" \n")
             self.key2wav[key] = path
             self.idx2key[i] = key
+            self.key2idx[key] = i
 
     def __len__(self):
         return len(self.idx2key)
