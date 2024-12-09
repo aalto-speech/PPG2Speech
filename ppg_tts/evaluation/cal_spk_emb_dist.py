@@ -2,7 +2,7 @@ import torch
 import torchaudio
 from loguru import logger
 from torch.nn import CosineSimilarity
-from ..dataset import BaseDataset
+from ..dataset import ExtendDataset
 from ..models import SpeakerEmbeddingPretrained
 from ..utils import build_parser
 
@@ -10,7 +10,7 @@ if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
 
-    dataset = BaseDataset(data_dir=args.data_dir)
+    dataset = ExtendDataset(data_dir=args.data_dir)
 
     SpEmModel = SpeakerEmbeddingPretrained(args.auth_token, args.device)
 
@@ -23,13 +23,12 @@ if __name__ == "__main__":
         source_key, target_key = entry.strip("\n").split()
 
         source_wav_path = f"{args.flip_wav_dir}/{source_key}_generated_e2e.wav"
-        target_wav_path = dataset.key2wav[target_key]
+        target_idx = dataset.key2idx[target_key]
 
         source_wav, source_sr = torchaudio.load(source_wav_path)
-        target_wav, target_sr = torchaudio.load(target_wav_path)
 
         source_spk_emb = SpEmModel.forward(source_wav, source_sr)
-        target_spk_emb = SpEmModel.forward(target_wav, target_sr)
+        target_spk_emb = dataset[target_idx]['spk_emb']
 
         with torch.no_grad():
             similarity = cos(source_spk_emb, target_spk_emb)
