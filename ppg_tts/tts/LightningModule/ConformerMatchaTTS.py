@@ -2,12 +2,18 @@ import numpy as np
 import os
 import lightning as L
 import torch
+import json
+from pyannote.audio import Model
 from ...models import ConformerMatchaTTS
 from torch.optim import lr_scheduler as LRScheduler
 from ...utils import plot_mel
+from vocoder.hifigan.models import Generator
+from vocoder.hifigan.env import AttrDict
+from vocoder.hifigan.inference_e2e import load_checkpoint
 
 class ConformerMatchaTTSModel(L.LightningModule):
     def __init__(self,
+                 auth_token: str,
                  ppg_dim: int,
                  encode_dim: int,
                  encode_heads: int,
@@ -27,7 +33,9 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  gamma: float=0.98,
                  no_ctc: bool=False,
                  diff_steps: int=300,
-                 temperature: float=0.667):
+                 temperature: float=0.667,
+                 vocoder_ckpt: str="vocoder/hifigan/ckpt/g_02500000",
+                 ):
         super().__init__()
 
         self.save_hyperparameters()
@@ -58,6 +66,28 @@ class ConformerMatchaTTSModel(L.LightningModule):
             decoder_num_mid_block=decoder_num_mid_block,
         )
 
+        # Load and Freeze Hifi-gan
+        # config_file = os.path.join(os.path.split(vocoder_ckpt)[0], 'config.json')
+        # with open(config_file) as f:
+        #     data = f.read()
+
+        # json_config = json.loads(data)
+        # h = AttrDict(json_config)
+
+        # self.generator = Generator(h)
+
+        # state_dict_g = load_checkpoint(vocoder_ckpt, self.device)
+        # self.generator.load_state_dict(state_dict_g['generator'])
+
+        # for param in self.generator.parameters():
+        #     param.requires_grad = False
+
+        # # Load and Freeze Speaker Embedding model
+        # self.spk_emb_model = Model.from_pretrained("pyannote/embedding", use_auth_token=auth_token, strict=False)
+
+        # for param in self.spk_emb_model.parameters():
+        #     param.requires_grad = False
+
     def training_step(self, batch, batch_idx, dataloader_idx=0):
         loss, _ = self.model.forward(
             x=batch['ppg'],
@@ -77,18 +107,19 @@ class ConformerMatchaTTSModel(L.LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
-        pred_mel = self.model.synthesis(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_mask=batch['mel_mask'],
-            diff_steps=self.diffusion_steps,
-            temperature=self.temperature
-        )
+        with torch.no_grad():
+            pred_mel = self.model.synthesis(
+                x=batch['ppg'],
+                spk_emb=batch['spk_emb'],
+                pitch_target=batch['log_F0'],
+                v_flag=batch['v_flag'],
+                energy_length=batch['energy_len'],
+                mel_mask=batch['mel_mask'],
+                diff_steps=self.diffusion_steps,
+                temperature=self.temperature
+            )
 
-        mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
+            mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
 
         self.log_dict({
             "val/mel_loss": mel_loss
@@ -97,19 +128,19 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return mel_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
-        
-        pred_mel = self.model.synthesis(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_mask=batch['mel_mask'],
-            diff_steps=self.diffusion_steps,
-            temperature=self.temperature
-        )
+        with torch.no_grad():
+            pred_mel = self.model.synthesis(
+                x=batch['ppg'],
+                spk_emb=batch['spk_emb'],
+                pitch_target=batch['log_F0'],
+                v_flag=batch['v_flag'],
+                energy_length=batch['energy_len'],
+                mel_mask=batch['mel_mask'],
+                diff_steps=self.diffusion_steps,
+                temperature=self.temperature
+            )
 
-        mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
+            mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
 
         self.log_dict({
             "test/mel_loss": mel_loss
@@ -125,18 +156,19 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return mel_loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        pred_mel = self.model.synthesis(
-            x=batch['ppg'],
-            spk_emb=batch['spk_emb'],
-            pitch_target=batch['log_F0'],
-            v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
-            mel_mask=batch['mel_mask'],
-            diff_steps=self.diffusion_steps,
-            temperature=self.temperature
-        )
+        with torch.no_grad():
+            pred_mel = self.model.synthesis(
+                x=batch['ppg'],
+                spk_emb=batch['spk_emb'],
+                pitch_target=batch['log_F0'],
+                v_flag=batch['v_flag'],
+                energy_length=batch['energy_len'],
+                mel_mask=batch['mel_mask'],
+                diff_steps=self.diffusion_steps,
+                temperature=self.temperature
+            )
 
-        saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
+            saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
 
         mel_save_dir = self.logger.save_dir + "/mel"
 

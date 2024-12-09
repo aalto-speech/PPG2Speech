@@ -142,7 +142,6 @@ class ConformerMatchaTTS(nn.Module):
             
         return pad_mu, pad_mask, pad_mel_target
     
-    @torch.no_grad()
     def synthesis(self,
                   x: torch.Tensor,
                   spk_emb: torch.Tensor,
