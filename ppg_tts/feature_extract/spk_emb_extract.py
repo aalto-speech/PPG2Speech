@@ -9,9 +9,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.dataset == 'perso':
-        dataset = PersoDatasetBasic(args.data_dir)
+        dataset = PersoDatasetBasic(args.data_dir, target_sr=16000)
     else:
-        dataset = BaseDataset(data_dir=args.data_dir)
+        dataset = BaseDataset(data_dir=args.data_dir, target_sr=16000)
 
     SpEmModel = SpeakerEmbeddingPretrained(args.auth_token, args.device)
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
                     wav = utterance["feature"]
                 else:
                     wav = utterance[1]
-                emb = SpEmModel.forward(wav)
+                emb = SpEmModel.forward(wav, sr=16000)
 
                 if args.dataset == 'perso':
                     key = utterance["key"]

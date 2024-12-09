@@ -28,7 +28,9 @@ if __name__ == "__main__":
 
         source_wav, source_sr = torchaudio.load(source_wav_path)
 
-        source_spk_emb = torch.from_numpy(SpEmModel.forward(source_wav, source_sr))
+        source_wav = torchaudio.functional.resample(source_wav, source_sr, 16000)
+
+        source_spk_emb = torch.from_numpy(SpEmModel.forward(source_wav, 16000))
         target_spk_emb = dataset[target_idx]['spk_emb']
 
         with torch.no_grad():
