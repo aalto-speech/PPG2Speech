@@ -65,13 +65,13 @@ if __name__ == "__main__":
 
     for testdata in testloader:
         # Inference mel spectrogram
-        target_key, target_spk_emb = spk_emb=replace_spk_emb(testset=testset)
-        logger.info(f"generate {testdata['key']} with speaker embedding from {target_key}")
-        print(f"{testdata['key']} {target_key}\n", file=speaker_mapping)
+        target_key, target_spk_emb = replace_spk_emb(testset=testset)
+        logger.info(f"generate {testdata['keys'][0]} with speaker embedding from {target_key}")
+        print(f"{testdata['keys'][0]} {target_key}", file=speaker_mapping)
         pred_mel = model.synthesis(
-            x=testdata['feature'],
-            spk_emb=target_spk_emb,
-            pitch_target=testdata['log_f0'],
+            x=testdata['ppg'],
+            spk_emb=target_spk_emb.unsqueeze(0),
+            pitch_target=testdata['log_F0'],
             v_flag=testdata['v_flag'],
             energy_length=testdata['energy_len'],
             mel_mask=testdata['mel_mask'],
@@ -82,6 +82,6 @@ if __name__ == "__main__":
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
 
         # Save mel spectrogram
-        np.save(f"{mel_save_dir}/{testdata['key']}", saved_mel)
+        np.save(f"{mel_save_dir}/{testdata['keys'][0]}", saved_mel)
 
     speaker_mapping.close()

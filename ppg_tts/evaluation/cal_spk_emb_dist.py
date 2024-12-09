@@ -1,5 +1,6 @@
 import torch
 import torchaudio
+import shutil
 from loguru import logger
 from torch.nn import CosineSimilarity
 from ..dataset import ExtendDataset
@@ -27,7 +28,7 @@ if __name__ == "__main__":
 
         source_wav, source_sr = torchaudio.load(source_wav_path)
 
-        source_spk_emb = SpEmModel.forward(source_wav, source_sr)
+        source_spk_emb = torch.from_numpy(SpEmModel.forward(source_wav, source_sr))
         target_spk_emb = dataset[target_idx]['spk_emb']
 
         with torch.no_grad():
@@ -36,6 +37,10 @@ if __name__ == "__main__":
         avg_simi += similarity.detach().cpu().item()
 
         logger.info(f"Cosine similarity between {source_key} and {target_key} is {similarity.detach().cpu().item()}")
+
+        target_wav_path = dataset.key2wav[target_key]
+
+        shutil.copyfile(target_wav_path, f"{args.flip_wav_dir}/{source_key}_style_reference.wav")
 
     avg_simi /= len(dataset)
 
