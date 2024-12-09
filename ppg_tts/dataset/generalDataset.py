@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from kaldiio import ReadHelper
 from torch.nn.functional import interpolate
 
-class VCTKLibriTTSRBase(Dataset):
+class BaseDataset(Dataset):
     def __init__(self, data_dir: str, target_sr: int=22050):
         super().__init__()
         self.target_sr = target_sr
@@ -43,12 +43,14 @@ class VCTKLibriTTSRBase(Dataset):
         return key, wav, sr
 
 
-class VCTKLibriTTSRExtend(VCTKLibriTTSRBase):
+class ExtendDataset(BaseDataset):
     def __init__(self, data_dir: str, target_sr: int=22050, no_ctc: bool=True):
         super().__init__(data_dir, target_sr)
         self.no_ctc = no_ctc
+
+        flag = '_no_ctc' if self.no_ctc else ''
         
-        self.ppg_path = Path(data_dir, "ppg_no_ctc.scp")
+        self.ppg_path = Path(data_dir, f"ppg{flag}.scp")
         self.spk_emb_path = Path(data_dir, "embedding.scp")
         self.log_F0_path = Path(data_dir, "log_f0.scp")
         self.v_flag = Path(data_dir, "voiced.scp")

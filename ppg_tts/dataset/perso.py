@@ -12,6 +12,7 @@ from torch.nn.functional import interpolate
 
 class PersoDatasetBasic(Dataset):
     def __init__(self, data_dir: str, target_sr: int=22050):
+        logger.warning(f"{self.__class__.__name__} is deprecated. Please use BasicDataset for Perso instead.")
         self.data_dir = data_dir
         self.wav_scp_path = Path(self.data_dir, "wav.scp")
         self.text_path = Path(self.data_dir, "text")
@@ -51,6 +52,7 @@ class PersoDatasetBasic(Dataset):
 class PersoDatasetWithConditions(PersoDatasetBasic):
     def __init__(self, data_dir, no_ctc: bool=False):
         super().__init__(data_dir)
+        logger.warning(f"{self.__class__.__name__} is deprecated. Please use ExtendDataset for Perso with condition instead.")
         if no_ctc:
             self.ppg_path = Path(data_dir, "ppg_no_ctc.scp")
         else:

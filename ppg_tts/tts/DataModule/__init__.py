@@ -1,3 +1,2 @@
 from .PersoDataModule import PersoDataModule
-from .VctkLibriTTSRDataModule import BasicDataModule, LibriTTSRDataModule
-from .MixDataModule import MixDataModule
+from .BasicDataModule import BasicDataModule, LibriTTSRDataModule
