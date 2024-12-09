@@ -32,9 +32,9 @@ if __name__ == "__main__":
 
         similarity = cos(source_spk_emb, target_spk_emb)
 
-        avg_simi += similarity.item()
+        avg_simi += similarity.detach().cpu().item()
 
-        logger.info(f"Cosine similarity between {source_key} and {target_key} is {similarity.item()}")
+        logger.info(f"Cosine similarity between {source_key} and {target_key} is {similarity.detach().cpu().item()}")
 
     avg_simi /= len(dataset)
 
