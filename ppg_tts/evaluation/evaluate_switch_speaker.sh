@@ -5,6 +5,11 @@ ckpt=$2
 device=$3
 auth_token=$4
 
+if [ $# -lt 4 ]; then
+    echo "Usage: $0 <testset> <ckpt> <device> <auth_token>"
+    exit 1
+fi
+
 exp_dir=$(dirname "$(dirname "$ckpt")")
 
 echo "Generating mels with flipped speaker identity"
