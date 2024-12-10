@@ -44,6 +44,10 @@ if __name__ == "__main__":
 
         shutil.copyfile(target_wav_path, f"{args.flip_wav_dir}/{source_key}_style_reference.wav")
 
+        source_wav_path = dataset.key2wav[source_key]
+
+        shutil.copyfile(source_wav_path, f"{args.flip_wav_dir}/{source_key}_context_reference.wav")
+
     avg_simi /= len(dataset)
 
     logger.info(f"The average cosine similarity is {avg_simi}")

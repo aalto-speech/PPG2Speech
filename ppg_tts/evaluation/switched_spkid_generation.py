@@ -10,8 +10,11 @@ from ..dataset import ExtendDataset, PersoCollateFn
 from ..models import ConformerMatchaTTS
 from ..utils import build_parser
 
-def replace_spk_emb(testset: ExtendDataset) -> Tuple[str, torch.Tensor]:
+def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
     random_idx = random.randint(0, len(testset) - 1)
+
+    while random_idx == curr_idx:
+        random_idx = random.randint(0, len(testset) - 1)
 
     return testset[random_idx]['key'], testset[random_idx]['spk_emb']
 
@@ -53,7 +56,8 @@ if __name__ == "__main__":
         dataset=testset,
         batch_size=1,
         num_workers=4,
-        collate_fn=PersoCollateFn
+        collate_fn=PersoCollateFn,
+        shuffle=False,
     )
 
     exp_dir = Path(args.ckpt).parent.parent
@@ -63,9 +67,9 @@ if __name__ == "__main__":
 
     speaker_mapping = open(mel_save_dir / "speaker_mapping", "w")
 
-    for testdata in testloader:
+    for i, testdata in enumerate(testloader):
         # Inference mel spectrogram
-        target_key, target_spk_emb = replace_spk_emb(testset=testset)
+        target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
         logger.info(f"generate {testdata['keys'][0]} with speaker embedding from {target_key}")
         print(f"{testdata['keys'][0]} {target_key}", file=speaker_mapping)
         pred_mel = model.synthesis(
