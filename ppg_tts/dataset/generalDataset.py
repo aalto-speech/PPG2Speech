@@ -25,6 +25,15 @@ class BaseDataset(Dataset):
             self.idx2key[i] = key
             self.key2idx[key] = i
 
+        with open(f"{data_dir}/text", "r") as reader:
+            textlist = reader.readlines()
+
+        self.key2text = {}
+
+        for text in textlist:
+            key, *words = text.strip('\n').split()
+            self.key2text[key] = " ".join(words)
+
     def __len__(self):
         return len(self.idx2key)
     
@@ -42,7 +51,7 @@ class BaseDataset(Dataset):
                                              orig_freq=sr,
                                              new_freq=self.target_sr)
         
-        return key, wav, sr
+        return key, wav, sr, self.key2text[key]
 
 
 class ExtendDataset(BaseDataset):
