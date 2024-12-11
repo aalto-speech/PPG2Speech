@@ -12,9 +12,11 @@ if __name__ == "__main__":
 
     dataset = ExtendDataset(args.data_dir)
 
-    logger.info("Get pitch median for each speaker")
+    logger.info(f"Get pitch median for each speaker, and extract stats on log F0 and Energy to {args.data_dir}, in total {len(dataset)} utterances")
 
     all_pitch_per_speaker = defaultdict(list)
+
+    log_F0_min, log_F0_max, energy_min, energy_max = np.inf, -np.inf, np.inf, -np.inf
 
     for data in dataset:
         key = data["key"]
@@ -30,16 +32,6 @@ if __name__ == "__main__":
 
         all_pitch_per_speaker[speaker].extend(orig_pitch)
 
-    median = {spk: np.median(pitches) for spk, pitches in all_pitch_per_speaker.items()}
-
-    with open(f"{args.data_dir}/picth_median_per_speaker.json", "w") as f:
-        json.dump(median, f, indent=4)
-
-    logger.info(f"Extracting stats on log F0 and Energy to {args.data_dir}, in total {len(dataset)} utterances.")
-
-    log_F0_min, log_F0_max, energy_min, energy_max = np.inf, -np.inf, np.inf, -np.inf
-
-    for data in dataset:
         curr_log_F0_min = data["log_F0"].min().item()
         curr_log_F0_max = data["log_F0"].max().item()
 
@@ -62,6 +54,11 @@ if __name__ == "__main__":
 
         if curr_energy_max > energy_max:
             energy_max = curr_energy_max
+
+    median = {spk: np.median(pitches) for spk, pitches in all_pitch_per_speaker.items()}
+
+    with open(f"{args.data_dir}/picth_median_per_speaker.json", "w") as f:
+        json.dump(median, f, indent=4)
 
     with open(f"{args.data_dir}/stats.json", "w") as f:
         json.dump({
