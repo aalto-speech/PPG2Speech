@@ -24,7 +24,9 @@ if __name__ == "__main__":
         pitch = data['log_F0']
         uv = data['v_flag']
 
-        orig_pitch = torch.where(pitch * uv > 0, pitch).tolist()
+        orig_pitch = pitch * uv
+
+        orig_pitch = orig_pitch[orig_pitch > 0].tolist()
 
         all_pitch_per_speaker[speaker].extend(orig_pitch)
 
