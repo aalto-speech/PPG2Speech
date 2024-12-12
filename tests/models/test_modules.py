@@ -1,6 +1,28 @@
 import torch
 import unittest
-from ppg_tts.models.modules import VariancePredictor, SpeakerEmbeddingEncoder, VarianceAdaptor
+from ppg_tts.models.modules import VariancePredictor, SpeakerEmbeddingEncoder, VarianceAdaptor, PitchEncoder
+
+class TestPitchEncoder(unittest.TestCase):
+    def setUp(self):
+        self.module = PitchEncoder(8, -10, 10)
+
+        self.pitch = torch.randn((2,3,1))
+        self.v_flag = torch.randn((2,3,1))
+
+        self.mask = torch.tensor([
+            [False, True, True],
+            [False, False, True]
+        ],
+        dtype=torch.bool).unsqueeze(-1)
+
+    def testForward(self):
+        enc_pitch = self.module.forward(
+            self.pitch,
+            self.v_flag,
+            self.mask
+        )
+
+        self.assertTupleEqual(enc_pitch.shape, (2,3,9))
 
 class TestVariancePredictor(unittest.TestCase):
     def setUp(self):
@@ -67,3 +89,4 @@ if __name__ == "__main__":
     TestVariancePredictor.run()
     TestSpeakerEmbeddingEncoder.run()
     TestVarianceAdapter.run()
+    TestPitchEncoder.run()

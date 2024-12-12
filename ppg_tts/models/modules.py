@@ -4,13 +4,38 @@ from torch import nn
 from collections import OrderedDict
 
 class PitchEncoder(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,
+                 emb_size: int,
+                 pitch_min: float,
+                 pitch_max: float,
+                 n_bins: int=256):
+        super().__init__()
+
+        self.pitch_bins = nn.Parameter(
+            torch.exp(
+                torch.linspace(np.log(pitch_min), np.log(pitch_max), n_bins - 1)
+            ),
+            requires_grad=False,
+        )
+
+        self.pitch_embedding = nn.Embedding(n_bins, emb_size)
 
     def forward(self,
                 pitch: torch.Tensor,
-                v_flag: torch.Tensor) -> torch.Tensor:
-        pass
+                v_flag: torch.Tensor,
+                pitch_mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            pitch: input pitch of shape (B, T, 1)
+            v_flag: the voiced flag of shape (B, T, 1)
+            pitch_mask: bool tensor of shape (B, T, 1)
+        Return:
+            pitch_enc: tensor of shape (B, T, E+1)
+        """
+        embedding = self.pitch_embedding(torch.bucketize(pitch, self.pitch_bins))
+        out = torch.cat([embedding.squeeze(-2), v_flag], dim=-1)
+
+        return out.masked_fill_(pitch_mask, 0.0)
 
 class VarianceAdaptor(nn.Module):
     """
