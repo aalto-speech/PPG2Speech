@@ -3,6 +3,15 @@ import numpy as np
 from torch import nn
 from collections import OrderedDict
 
+class PitchEncoder(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward(self,
+                pitch: torch.Tensor,
+                v_flag: torch.Tensor) -> torch.Tensor:
+        pass
+
 class VarianceAdaptor(nn.Module):
     """
     Variance Adaptor
