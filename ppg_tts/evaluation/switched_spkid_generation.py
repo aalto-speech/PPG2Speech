@@ -1,6 +1,7 @@
 import os
 import torch
 import random
+import json
 import numpy as np
 from loguru import logger
 from pathlib import Path
@@ -52,6 +53,9 @@ if __name__ == "__main__":
         data_dir=args.data_dir,
     )
 
+    with open(f"{args.data_dir}/picth_median_per_speaker.json", "r") as median_reader:
+        speaker_median = json.load(median_reader)
+
     testloader = DataLoader(
         dataset=testset,
         batch_size=1,
@@ -69,13 +73,23 @@ if __name__ == "__main__":
 
     for i, testdata in enumerate(testloader):
         # Inference mel spectrogram
+        source_key = testdata['keys'][0]
         target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
-        logger.info(f"generate {testdata['keys'][0]} with speaker embedding from {target_key}")
-        print(f"{testdata['keys'][0]} {target_key}", file=speaker_mapping)
+        logger.info(f"generate {source_key} with speaker embedding from {target_key}")
+        print(f"{source_key} {target_key}", file=speaker_mapping)
+
+        # Pitch shift in inference
+        curr_speaker = source_key.split('_')[0]
+        target_speaker = target_key.split('_')[0]
+        curr_median = speaker_median[curr_speaker]
+        target_median = speaker_median[target_speaker]
+
+        shifted_pitch = testdata['log_F0'] * target_median / curr_median
+
         pred_mel = model.synthesis(
             x=testdata['ppg'],
             spk_emb=target_spk_emb.unsqueeze(0),
-            pitch_target=testdata['log_F0'],
+            pitch_target=shifted_pitch,
             v_flag=testdata['v_flag'],
             energy_length=testdata['energy_len'],
             mel_mask=testdata['mel_mask'],
@@ -86,6 +100,6 @@ if __name__ == "__main__":
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
 
         # Save mel spectrogram
-        np.save(f"{mel_save_dir}/{testdata['keys'][0]}", saved_mel)
+        np.save(f"{mel_save_dir}/{source_key}", saved_mel)
 
     speaker_mapping.close()
