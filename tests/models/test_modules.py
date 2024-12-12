@@ -40,15 +40,14 @@ class TestVariancePredictor(unittest.TestCase):
 
 class TestSpeakerEmbeddingEncoder(unittest.TestCase):
     def setUp(self):
-        self.x = torch.randn((4,512))
+        self.x = torch.randn((4,32))
 
-        self.module = SpeakerEmbeddingEncoder(input_size=512,
-                                              model_size=2048,
-                                              output_size=256)
+        self.module = SpeakerEmbeddingEncoder(input_size=32,
+                                              output_size=4)
 
     def testForward(self):
         y = self.module(self.x)
-        self.assertTupleEqual(y.shape, (4,256))
+        self.assertTupleEqual(y.shape, (4,1,4))
 
 class TestVarianceAdapter(unittest.TestCase):
     def setUp(self):

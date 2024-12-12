@@ -135,22 +135,19 @@ class SpeakerEmbeddingEncoder(nn.Module):
     """
     def __init__(self,
                  input_size: int,
-                 model_size: int,
-                 output_size: int,
-                 dropout: float=0.5):
+                 output_size: int,):
         super(SpeakerEmbeddingEncoder, self).__init__()
 
         self.input_size = input_size
-        self.model_size = model_size
         self.output_size = output_size
-        self.dropout = dropout
 
         self.encoder = nn.Sequential(
-            nn.Linear(in_features=input_size, out_features=model_size, bias=True),
-            nn.LayerNorm(model_size),
+            nn.Conv1d(
+                in_channels=input_size,
+                out_channels=output_size,
+                kernel_size=1,
+            ),
             nn.ReLU(),
-            nn.Dropout(self.dropout),
-            nn.Linear(in_features=model_size, out_features=output_size, bias=True)
         )
 
     def forward(self, spk_embs: torch.Tensor) -> torch.Tensor:
@@ -158,9 +155,9 @@ class SpeakerEmbeddingEncoder(nn.Module):
         Arguments:
             spk_embs: tensor with shape (B, E)
         Returns:
-            tensor with shape (B, E_out)
+            tensor with shape (B, 1, E_out)
         """
-        return self.encoder(spk_embs)
+        return self.encoder(spk_embs.unsqueeze(-1)).transpose(-1, -2)
     
 class Conv(nn.Module):
     """
