@@ -27,7 +27,7 @@ class AutoEncoder(nn.Module):
         self.cond_path = nn.Sequential(
             nn.Conv1d(
                 in_channels=cond_channel,
-                out_channels=hidden_channel,
+                out_channels=2 * hidden_channel,
                 kernel_size=1,
             ),
             nn.ReLU(),
@@ -35,7 +35,7 @@ class AutoEncoder(nn.Module):
 
         self.dec = nn.Sequential(
             nn.Conv1d(
-                in_channels=hidden_channel * 2,
+                in_channels=hidden_channel,
                 out_channels=input_channel // 4,
                 kernel_size=1,
             ),
@@ -66,7 +66,9 @@ class AutoEncoder(nn.Module):
 
         z_cond = self.cond_path(condition)
 
-        z_dec = torch.concat([z, z_cond], dim=1)
+        # Use FiLM to force using speaker information here
+        cond_b, cond_a = torch.chunk(z_cond, 2, dim=1)
+        z_dec = cond_a * z + cond_b
 
         x = self.dec(z_dec)
 
