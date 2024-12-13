@@ -62,9 +62,9 @@ model:
   init_args:
     pitch_stats: /scratch/elec/t412-speechsynth/DATA/fin-mix/train/stats.json
     ppg_dim: 34
-    encode_dim: 128
+    encode_dim: 64
     spk_emb_size: 512
-    pitch_emb_size: 32
+    pitch_emb_size: 16
     dropout: 0.1
     target_dim: 80
     sigma_min: 1e-4
@@ -76,7 +76,8 @@ model:
     diff_steps: 10
     transformer_type: transformer
     temperature: 0.667
-    ae_loss_scale: 1.0
+    ae_kernel_sizes: [3,3,1]
+    ae_dilations: [2,4,8]
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

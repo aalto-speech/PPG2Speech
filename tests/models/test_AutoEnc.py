@@ -4,7 +4,7 @@ from ppg_tts.models.AutoEnc import AutoEncoder
 
 class TestAutoEncoder(unittest.TestCase):
     def setUp(self):
-        self.model = AutoEncoder(10,2,8)
+        self.model = AutoEncoder(10,2,8, [1,3,3], [1,2,3])
 
         self.content = torch.randn((2,10,3))
         self.cond = torch.randn((2,8,3))

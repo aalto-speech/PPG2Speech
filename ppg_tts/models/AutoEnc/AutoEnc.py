@@ -1,24 +1,95 @@
 import torch
 from torch import nn
-from typing import Tuple
+from typing import Tuple, List
+
+class ResidualConvLayer(nn.Module):
+    def __init__(self, channels: int, kernel_size: int, dilation: int, cond_channel: int=None):
+        """
+        A residual convolution layer with customizable kernel size and dilation.
+
+        Args:
+            channels (int): Number of input and output channels.
+            kernel_size (int): Size of the convolution kernel.
+            dilation (int): Dilation rate for the convolution.
+        """
+        super(ResidualConvLayer, self).__init__()
+
+        # Padding to ensure the output length matches the input length
+        padding = (kernel_size - 1) // 2 * dilation
+
+        self.conv = nn.Conv1d(
+            in_channels=channels,
+            out_channels=channels,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            padding=padding
+        )
+        self.norm = nn.BatchNorm1d(channels)
+        self.activation = nn.ReLU()
+
+        if cond_channel is not None:
+            self.cond_path = nn.Sequential(
+                nn.Conv1d(
+                    in_channels=cond_channel,
+                    out_channels=channels,
+                    kernel_size=1,
+                ),
+                nn.ReLU(),
+            )
+
+    def forward(self, x: torch.Tensor, cond: torch.Tensor=None) -> torch.Tensor:
+        """Forward pass for the residual convolution layer."""
+
+        if cond is not None:
+            # FiLM layer between cond and x:
+            z_cond = self.cond_path(cond)
+
+            # Use FiLM to force using speaker information here
+            cond_b, cond_a = torch.chunk(z_cond, 2, dim=1)
+            x = cond_a * x + cond_b
+
+        # Apply convolution, normalization, and activation
+        out = self.conv(x)
+        out = self.norm(out)
+        out = self.activation(out)
+
+        # Add the residual connection
+        return x + out
+
 
 class AutoEncoder(nn.Module):
     def __init__(self,
                  input_channel: int,
                  hidden_channel: int,
                  cond_channel: int,
-                 dropout: float=0.2):
+                 kernel_sizes: List[int],
+                 dilations: List[int],
+                 dropout: float=0.1):
         super().__init__()
 
-        self.enc = nn.Sequential(
+        assert len(kernel_sizes) == len(dilations), "The kernel_sizes and dilations are not compatible"
+
+        self.enc = nn.ModuleList()
+
+        self.enc.append(
             nn.Conv1d(
                 in_channels=input_channel,
                 out_channels=input_channel // 4,
                 padding=1,
                 kernel_size=3,
-            ),
-            nn.ReLU(),
-            nn.Dropout(p=dropout),
+            )
+        )
+
+        self.enc.append(
+            nn.ReLU()
+        )
+
+        for ks, d in zip(kernel_sizes, dilations):
+            self.enc.append(
+                ResidualConvLayer(input_channel // 4, ks, d)
+            )
+
+        self.enc.append(
             nn.Conv1d(
                 in_channels=input_channel // 4,
                 out_channels=hidden_channel,
@@ -26,29 +97,30 @@ class AutoEncoder(nn.Module):
             )
         )
 
-        self.cond_path = nn.Sequential(
-            nn.Conv1d(
-                in_channels=cond_channel,
-                out_channels=2 * hidden_channel,
-                kernel_size=1,
-            ),
-            nn.ReLU(),
-        )
 
-        self.dec = nn.Sequential(
+        self.dec = nn.ModuleList()
+
+        self.dec.append(
             nn.Conv1d(
                 in_channels=hidden_channel,
                 out_channels=input_channel // 4,
                 kernel_size=1,
-            ),
-            nn.ReLU(),
-            nn.Dropout(p=dropout),
-            nn.Conv1d(
-                in_channels=input_channel // 4,
-                out_channels=input_channel,
-                padding=1,
-                kernel_size=3,
             )
+        )
+
+        self.dec.append(
+            nn.ReLU()
+        )
+
+        for ks, d in zip(reversed(kernel_sizes), reversed(dilations)):
+            self.dec.append(
+                ResidualConvLayer(input_channel // 4, ks, d, cond_channel)
+            )
+
+        self.output = nn.Conv1d(
+            in_channels=input_channel // 4,
+            out_channels=input_channel,
+            kernel_size=1,
         )
 
     def forward(self,
@@ -64,15 +136,19 @@ class AutoEncoder(nn.Module):
             z: hidden representation of shape (B, Hid, T)
             x: reconstruct signal with the same shape as content
         """
+        z = content
 
-        z = self.enc(content)
+        for layer in self.enc:
+            z = layer(z)
 
-        z_cond = self.cond_path(condition)
+        z_dec = z
 
-        # Use FiLM to force using speaker information here
-        cond_b, cond_a = torch.chunk(z_cond, 2, dim=1)
-        z_dec = cond_a * z + cond_b
+        for i, layer in enumerate(self.dec):
+            if i < 2:
+                z_dec = layer(z_dec)
+            else:
+                z_dec = layer(z_dec, condition)
 
-        x = self.dec(z_dec)
+        z_dec = self.output(z_dec)
 
-        return z.masked_fill(mask, 0.0), x.masked_fill(mask, 0.0)
+        return z.masked_fill(mask, 0.0), z_dec.masked_fill(mask, 0.0)

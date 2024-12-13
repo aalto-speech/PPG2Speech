@@ -3,6 +3,7 @@ import os
 import json
 import lightning as L
 import torch
+from typing import List
 from ...models import ConformerMatchaTTS
 from torch.optim import lr_scheduler as LRScheduler
 from ...utils import plot_mel
@@ -27,7 +28,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  no_ctc: bool=False,
                  diff_steps: int=300,
                  temperature: float=0.667,
-                 ae_loss_scale: float=1.0):
+                 ae_kernel_sizes: List[int] = [3,3,1],
+                 ae_dilations: List[int] = [2,4,8]):
         super().__init__()
 
         with open(pitch_stats, "r") as reader:
@@ -44,7 +46,6 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.temperature = temperature
         self.pitch_min = self.pitch_stats['pitch_min']
         self.pitch_max = self.pitch_stats['pitch_max']
-        self.ae_loss_scale = ae_loss_scale
 
         self.model = ConformerMatchaTTS(
             ppg_dim=ppg_dim,
@@ -60,6 +61,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
             pitch_min=self.pitch_min,
             pitch_max=self.pitch_max,
             pitch_emb_size=pitch_emb_size,
+            ae_kernel_sizes=ae_kernel_sizes,
+            ae_dilations=ae_dilations
         )
 
         self.ae_loss = torch.nn.L1Loss()
@@ -81,7 +84,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             "train/ae_reconstruct_loss": ae_loss,
         })
         
-        return loss + self.ae_loss_scale * ae_loss
+        return loss + ae_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
@@ -104,7 +107,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             "val/ae_reconstruct_loss": ae_loss,
         })
         
-        return mel_loss + self.ae_loss_scale * ae_loss
+        return mel_loss + ae_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         
