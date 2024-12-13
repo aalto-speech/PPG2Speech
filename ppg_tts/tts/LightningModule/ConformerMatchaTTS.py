@@ -65,7 +65,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             ae_dilations=ae_dilations
         )
 
-        self.ae_loss = torch.nn.MSELoss()
+        self.ae_loss = torch.nn.L1Loss()
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
         loss, x_rec = self.model.forward(
