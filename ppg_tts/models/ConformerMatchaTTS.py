@@ -120,8 +120,6 @@ class ConformerMatchaTTS(nn.Module):
             mask=mask
         )
 
-        # import pdb
-        # pdb.set_trace()
         z = z.transpose(-1, -2)
 
         x_rec = x_rec.transpose(-1, -2)
@@ -230,8 +228,6 @@ class ConformerMatchaTTS(nn.Module):
                 cond_enc,
             )
 
-        import pdb
-        pdb.set_trace()
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
             mask=~mel_mask.unsqueeze(1),
