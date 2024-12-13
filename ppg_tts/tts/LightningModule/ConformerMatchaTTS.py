@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import json
 import lightning as L
 import torch
 from ...models import ConformerMatchaTTS
@@ -8,12 +9,10 @@ from ...utils import plot_mel
 
 class ConformerMatchaTTSModel(L.LightningModule):
     def __init__(self,
+                 pitch_stats: str,
                  ppg_dim: int,
                  encode_dim: int,
-                 encode_heads: int,
-                 encode_layers: int,
-                 encode_ffn_dim: int,
-                 encode_kernel_size: int,
+                 pitch_emb_size: int,
                  spk_emb_size: int,
                  decoder_num_block: int=1,
                  decoder_num_mid_block: int=2,
@@ -30,24 +29,24 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  temperature: float=0.667):
         super().__init__()
 
+        with open(pitch_stats, "r") as reader:
+            self.pitch_stats = json.load(reader)
+
         self.save_hyperparameters()
 
         self.lr = lr
         self.lr_scheduler = lr_scheduler
         self.warm_up_steps = warm_up_steps
-        self.model_size = encode_ffn_dim
         self.gamma = gamma
         self.no_ctc = no_ctc
         self.diffusion_steps = diff_steps
         self.temperature = temperature
+        self.pitch_min = self.pitch_stats['pitch_min']
+        self.pitch_max = self.pitch_stats['pitch_max']
 
         self.model = ConformerMatchaTTS(
             ppg_dim=ppg_dim,
             encode_dim=encode_dim,
-            encode_heads=encode_heads,
-            encode_layers=encode_layers,
-            encode_ffn_dim=encode_ffn_dim,
-            encode_kernel_size=encode_kernel_size,
             spk_emb_size=spk_emb_size,
             dropout=dropout,
             target_dim=target_dim,
@@ -56,24 +55,31 @@ class ConformerMatchaTTSModel(L.LightningModule):
             transformer_type=transformer_type,
             decoder_num_block=decoder_num_block,
             decoder_num_mid_block=decoder_num_mid_block,
+            pitch_min=self.pitch_min,
+            pitch_max=self.pitch_max,
+            pitch_emb_size=pitch_emb_size,
         )
 
+        self.ae_loss = torch.nn.L1Loss()
+
     def training_step(self, batch, batch_idx, dataloader_idx=0):
-        loss, _ = self.model.forward(
+        loss, x_rec = self.model.forward(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
             mel_target=batch['mel'],
             mel_mask=batch['mel_mask']
         )
+
+        ae_loss = self.ae_loss(batch['ppg'], x_rec)
         
         self.log_dict({
             "train/diffusion_loss": loss,
+            "train/ae_reconstruct_loss": ae_loss,
         })
         
-        return loss
+        return loss + ae_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
@@ -82,7 +88,6 @@ class ConformerMatchaTTSModel(L.LightningModule):
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
             temperature=self.temperature
@@ -103,7 +108,6 @@ class ConformerMatchaTTSModel(L.LightningModule):
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
             temperature=self.temperature
@@ -130,7 +134,6 @@ class ConformerMatchaTTSModel(L.LightningModule):
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
-            energy_length=batch['energy_len'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
             temperature=self.temperature

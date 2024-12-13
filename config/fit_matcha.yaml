@@ -9,7 +9,7 @@ trainer:
   logger: 
     class_path: lightning.pytorch.loggers.WandbLogger
     init_args:
-      project: "PPG_TTS_ConformerMatcha"
+      project: "PPG_VC_Matcha_AutoEncoder"
       name: 
       save_dir: "./logs/"
   callbacks:
@@ -60,13 +60,11 @@ trainer:
 model:
   class_path: ppg_tts.tts.LightningModule.ConformerMatchaTTSModel
   init_args:
+    pitch_stats: /scratch/elec/t412-speechsynth/DATA/fin-mix/train/stats.json
     ppg_dim: 34
     encode_dim: 128
-    encode_heads: 4
-    encode_layers: 6
-    encode_ffn_dim: 1024
-    encode_kernel_size: 9
     spk_emb_size: 512
+    pitch_emb_size: 32
     dropout: 0.1
     target_dim: 80
     sigma_min: 1e-4

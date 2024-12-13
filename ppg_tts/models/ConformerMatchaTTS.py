@@ -4,18 +4,19 @@ from torch import nn
 from torchaudio.models import Conformer
 from .matcha.flow_matching import CFM
 from .matcha.RoPE import RotaryPositionalEmbeddings
+from .modules import PitchEncoder, SpeakerEmbeddingEncoder
+from .AutoEnc import AutoEncoder
 
 class ConformerMatchaTTS(nn.Module):
     def __init__(self,
                  ppg_dim: int,
                  encode_dim: int,
-                 encode_heads: int,
-                 encode_layers: int,
-                 encode_ffn_dim: int,
-                 encode_kernel_size: int,
                  spk_emb_size: int,
                  decoder_num_mid_block: int,
                  decoder_num_block: int,
+                 pitch_min: float,
+                 pitch_max: float,
+                 pitch_emb_size: int,
                  dropout: float=0.1,
                  target_dim: int=80,
                  no_ctc: bool=False,
@@ -28,20 +29,25 @@ class ConformerMatchaTTS(nn.Module):
         if no_ctc:
             assert ppg_dim == 1024, "Wrong input dimension with no_ctc option"
 
-        self.pre_net = nn.Linear(in_features=ppg_dim+2,
-                                 out_features=encode_dim,
-                                 bias=True)
+        self.spk_enc = SpeakerEmbeddingEncoder(
+            input_size=spk_emb_size,
+            output_size=encode_dim
+        )
+
+        self.pitch_encoder = PitchEncoder(
+            emb_size=pitch_emb_size,
+            pitch_min=pitch_min,
+            pitch_max=pitch_max,
+        )
+
+        self.AE = AutoEncoder(
+            input_channel=ppg_dim,
+            hidden_channel=encode_dim,
+            cond_channel=encode_dim + pitch_emb_size + 1
+        )
         
         self.rope = RotaryPositionalEmbeddings(
             d=encode_dim
-        )
-        
-        self.encoder = Conformer(
-            input_dim=encode_dim,
-            num_heads=encode_heads,
-            ffn_dim=encode_ffn_dim,
-            num_layers=encode_layers,
-            depthwise_conv_kernel_size=encode_kernel_size
         )
 
         self.channel_mapping = nn.Sequential(
@@ -58,7 +64,7 @@ class ConformerMatchaTTS(nn.Module):
             cfm_params={
                 'sigma_min': sigma_min
             },
-            spk_emb_dim=spk_emb_size,
+            spk_emb_dim=spk_emb_size + pitch_emb_size + 1,
             decoder_params={
                 'dropout': dropout,
                 'down_block_type': transformer_type,
@@ -74,7 +80,6 @@ class ConformerMatchaTTS(nn.Module):
                 spk_emb: torch.Tensor,
                 pitch_target: torch.Tensor,
                 v_flag: torch.Tensor,
-                energy_length: torch.Tensor,
                 mel_target: torch.Tensor,
                 mel_mask: torch.Tensor):
         """
@@ -83,41 +88,47 @@ class ConformerMatchaTTS(nn.Module):
             spk_emb: speaker_embedding, shape (B, E_spk)
             pitch_target: shape (B, T_mel)
             v_flag: shape (B, T_mel)
-            energy_length: shape (B,)
             mel_target: shape (B, T, E),
             mel_mask: shape (B, T), bool tensor
         Returns:
             loss
-            refined_mel: shape (B, T, 80)
+            reconstructed x
         """
 
-        x = torch.cat([x,
-                       pitch_target.unsqueeze(-1),
-                       v_flag.unsqueeze(-1)
-                       ],
-                      dim=-1)
-        
-        x = self.pre_net(x)
+        mask = ~mel_mask.unsqueeze(1)
 
-        x_pos_enc = self.rope(x.unsqueeze(1)).squeeze(1)
+        enc_spk_emb = self.spk_enc(spk_emb) # B,E -> B,1,E'
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
 
-        x_enc, _ = self.encoder(x_pos_enc, energy_length)
+        cond = torch.cat([enc_spk_emb, enc_pitch], dim=-1) # B,T,E'+E_p+1
 
-        mu = self.channel_mapping(x_enc)
+        z, x_rec = self.AE.forward(
+            content=x.transpose(-1, -2),
+            condition=cond.transpose(-1, -2),
+            mask=mask
+        )
+
+        z = z.transpose(-1, -2)
+
+        x_rec = x_rec.transpose(-1, -2)
+
+        z_pos_enc = self.rope(z.unsqueeze(1)).squeeze(1)
+
+        mu = self.channel_mapping(z_pos_enc)
 
         if mu.size(1) % 2 == 1:
             mu, mel_mask, mel_target = self._pad_to_even(mu,
                                                          mel_mask,
                                                          mel_target)
 
-        loss, y = self.cfm.compute_loss(
+        loss, _ = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
-            mask=~mel_mask.unsqueeze(1),
-            spks=spk_emb
+            mask=mask,
+            spks=cond
         )
 
-        return loss, y
+        return loss, x_rec
     
     def _pad_to_even(self,
                      mu: torch.Tensor,
@@ -148,7 +159,6 @@ class ConformerMatchaTTS(nn.Module):
                   spk_emb: torch.Tensor,
                   pitch_target: torch.Tensor,
                   v_flag: torch.Tensor,
-                  energy_length: torch.Tensor,
                   mel_mask: torch.Tensor,
                   diff_steps: int=300,
                   temperature: float=0.667):
@@ -158,7 +168,6 @@ class ConformerMatchaTTS(nn.Module):
             spk_emb: speaker_embedding, shape (B, E_spk)
             pitch_target: shape (B, T_mel)
             v_flag: shape (B, T_mel)
-            energy_length: shape (B,)
             mel_target: shape (B, T, E),
             mel_mask: shape (B, T), bool tensor
         Returns:
@@ -166,20 +175,26 @@ class ConformerMatchaTTS(nn.Module):
         """
 
         pad_to_odd = False
+        mask = ~mel_mask.unsqueeze(1)
 
-        x = torch.cat([x,
-                       pitch_target.unsqueeze(-1),
-                       v_flag.unsqueeze(-1)
-                       ],
-                      dim=-1)
-        
-        x = self.pre_net(x)
+        enc_spk_emb = self.spk_enc(spk_emb) # B,E -> B,1,E'
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
 
-        x_pos_enc = self.rope(x.unsqueeze(1)).squeeze(1)
+        cond = torch.cat([enc_spk_emb, enc_pitch], dim=-1) # B,T,E'+E_p+1
 
-        x_enc, _ = self.encoder(x_pos_enc, energy_length)
+        z, _ = self.AE.forward(
+            content=x.transpose(-1, -2),
+            condition=cond.transpose(-1, -2),
+            mask=mask
+        )
 
-        mu = self.channel_mapping(x_enc)
+        z = z.transpose(-1, -2)
+
+        x_rec = x_rec.transpose(-1, -2)
+
+        z_pos_enc = self.rope(z.unsqueeze(1)).squeeze(1)
+
+        mu = self.channel_mapping(z_pos_enc)
 
         if mu.size(1) % 2 == 1:
             pad_to_odd = True
@@ -188,7 +203,7 @@ class ConformerMatchaTTS(nn.Module):
 
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
-            mask=~mel_mask.unsqueeze(1),
+            mask=mask,
             n_timesteps=diff_steps,
             spks=spk_emb,
             temperature=temperature

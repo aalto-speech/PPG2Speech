@@ -26,16 +26,16 @@ class PitchEncoder(nn.Module):
                 pitch_mask: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            pitch: input pitch of shape (B, T, 1)
-            v_flag: the voiced flag of shape (B, T, 1)
-            pitch_mask: bool tensor of shape (B, T, 1)
+            pitch: input pitch of shape (B, T)
+            v_flag: the voiced flag of shape (B, T)
+            pitch_mask: bool tensor of shape (B, T)
         Return:
             pitch_enc: tensor of shape (B, T, E+1)
         """
-        embedding = self.pitch_embedding(torch.bucketize(pitch, self.pitch_bins))
-        out = torch.cat([embedding.squeeze(-2), v_flag], dim=-1)
+        embedding = self.pitch_embedding(torch.bucketize(pitch.unsqueeze(-1), self.pitch_bins))
+        out = torch.cat([embedding.squeeze(-2), v_flag.unsqueeze(-1)], dim=-1)
 
-        return out.masked_fill_(pitch_mask, 0.0)
+        return out.masked_fill_(pitch_mask.unsqueeze(-1), 0.0)
 
 class VarianceAdaptor(nn.Module):
     """
