@@ -31,7 +31,7 @@ class ResidualConvLayer(nn.Module):
             self.cond_path = nn.Sequential(
                 nn.Conv1d(
                     in_channels=cond_channel,
-                    out_channels=channels,
+                    out_channels=channels * 2,
                     kernel_size=1,
                 ),
                 nn.ReLU(),
