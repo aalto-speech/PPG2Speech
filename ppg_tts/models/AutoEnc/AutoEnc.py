@@ -7,7 +7,7 @@ class AutoEncoder(nn.Module):
                  input_channel: int,
                  hidden_channel: int,
                  cond_channel: int,
-                 dropout: float=0.1):
+                 dropout: float=0.2):
         super().__init__()
 
         self.enc = nn.Sequential(
@@ -42,7 +42,7 @@ class AutoEncoder(nn.Module):
                 kernel_size=1,
             ),
             nn.ReLU(),
-            nn.Dropout(),
+            nn.Dropout(p=dropout),
             nn.Conv1d(
                 in_channels=input_channel // 4,
                 out_channels=input_channel,

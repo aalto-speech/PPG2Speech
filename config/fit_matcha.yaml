@@ -76,6 +76,7 @@ model:
     diff_steps: 10
     transformer_type: transformer
     temperature: 0.667
+    ae_loss_scale: 1.0
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

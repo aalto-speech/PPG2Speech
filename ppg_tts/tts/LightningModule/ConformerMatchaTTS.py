@@ -26,7 +26,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  gamma: float=0.98,
                  no_ctc: bool=False,
                  diff_steps: int=300,
-                 temperature: float=0.667):
+                 temperature: float=0.667,
+                 ae_loss_scale: float=1.0):
         super().__init__()
 
         with open(pitch_stats, "r") as reader:
@@ -43,6 +44,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.temperature = temperature
         self.pitch_min = self.pitch_stats['pitch_min']
         self.pitch_max = self.pitch_stats['pitch_max']
+        self.ae_loss_scale = ae_loss_scale
 
         self.model = ConformerMatchaTTS(
             ppg_dim=ppg_dim,
@@ -79,7 +81,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             "train/ae_reconstruct_loss": ae_loss,
         })
         
-        return loss + ae_loss
+        return loss + self.ae_loss_scale * ae_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
@@ -102,7 +104,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             "val/ae_reconstruct_loss": ae_loss,
         })
         
-        return mel_loss + ae_loss
+        return mel_loss + self.ae_loss_scale * ae_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         
