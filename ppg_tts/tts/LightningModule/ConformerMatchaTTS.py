@@ -62,7 +62,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
             pitch_emb_size=pitch_emb_size,
         )
 
-        self.ae_loss = torch.nn.L1Loss()
+        self.ae_loss = torch.nn.L1Loss(reduction='sum')
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
         loss, x_rec = self.model.forward(
