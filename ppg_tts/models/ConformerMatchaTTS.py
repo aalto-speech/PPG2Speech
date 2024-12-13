@@ -129,7 +129,7 @@ class ConformerMatchaTTS(nn.Module):
         mu = self.channel_mapping(z_pos_enc)
 
         if mu.size(1) % 2 == 1:
-            mu, mel_mask, pad_cond, mel_target = self._pad_to_even(
+            mu, mel_mask, cond_enc, mel_target = self._pad_to_even(
                 mu,
                 mel_mask,
                 cond_enc,
@@ -140,7 +140,7 @@ class ConformerMatchaTTS(nn.Module):
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
             mask=~mel_mask.unsqueeze(1),
-            spks=pad_cond.transpose(-1, -2),
+            spks=cond_enc.transpose(-1, -2),
         )
 
         return loss, x_rec
@@ -222,7 +222,7 @@ class ConformerMatchaTTS(nn.Module):
 
         if mu.size(1) % 2 == 1:
             pad_to_odd = True
-            mu, mel_mask, pad_cond, _ = self._pad_to_even(
+            mu, mel_mask, cond_enc, _ = self._pad_to_even(
                 mu,
                 mel_mask,
                 cond_enc,
@@ -232,7 +232,7 @@ class ConformerMatchaTTS(nn.Module):
             mu=mu.transpose(-1, -2),
             mask=~mel_mask.unsqueeze(1),
             n_timesteps=diff_steps,
-            spks=pad_cond.transpose(-1, -2),
+            spks=cond_enc.transpose(-1, -2),
             temperature=temperature
         )
 
