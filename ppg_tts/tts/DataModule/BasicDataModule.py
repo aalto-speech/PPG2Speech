@@ -30,7 +30,8 @@ class BasicDataModule(L.LightningDataModule):
         return DataLoader(self.train,
                           batch_size=self.batch_size,
                           num_workers=8,
-                          collate_fn=PersoCollateFn)
+                          collate_fn=PersoCollateFn,
+                          shuffle=True)
     
     def val_dataloader(self):
         return DataLoader(self.val,
