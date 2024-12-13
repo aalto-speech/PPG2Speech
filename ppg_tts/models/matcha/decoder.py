@@ -383,7 +383,7 @@ class Decoder(nn.Module):
         x = pack([x, mu], "b * t")[0]
 
         if spks is not None:
-            spks = repeat(spks, "b c -> b c t", t=x.shape[-1])
+            # spks = repeat(spks, "b c -> b c t", t=x.shape[-1])
             x = pack([x, spks], "b * t")[0]
 
         hiddens = []

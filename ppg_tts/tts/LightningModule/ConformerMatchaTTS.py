@@ -83,7 +83,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
-        pred_mel = self.model.synthesis(
+        pred_mel, x_rec = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
@@ -95,15 +95,18 @@ class ConformerMatchaTTSModel(L.LightningModule):
 
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
 
+        ae_loss = self.ae_loss(batch['ppg'], x_rec)
+
         self.log_dict({
-            "val/mel_loss": mel_loss
+            "val/mel_loss": mel_loss,
+            "val/ae_reconstruct_loss": ae_loss,
         })
         
-        return mel_loss
+        return mel_loss + ae_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         
-        pred_mel = self.model.synthesis(
+        pred_mel, _ = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
@@ -129,7 +132,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return mel_loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        pred_mel = self.model.synthesis(
+        pred_mel, _ = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],

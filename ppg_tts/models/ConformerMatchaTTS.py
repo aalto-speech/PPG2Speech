@@ -57,6 +57,15 @@ class ConformerMatchaTTS(nn.Module):
             nn.Dropout(p=dropout)
         )
 
+        self.cond_channel_mapping = nn.Sequential(
+            nn.Conv1d(
+                in_channels=encode_dim + pitch_emb_size + 1,
+                out_channels=encode_dim,
+                kernel_size=1
+            ),
+            nn.ReLU()
+        )
+
         self.cfm = CFM(
             in_channels=target_dim,
             out_channel=target_dim,
@@ -64,7 +73,7 @@ class ConformerMatchaTTS(nn.Module):
             cfm_params={
                 'sigma_min': sigma_min
             },
-            spk_emb_dim=spk_emb_size + pitch_emb_size + 1,
+            spk_emb_dim=encode_dim,
             decoder_params={
                 'dropout': dropout,
                 'down_block_type': transformer_type,
@@ -97,10 +106,13 @@ class ConformerMatchaTTS(nn.Module):
 
         mask = ~mel_mask.unsqueeze(1)
 
-        enc_spk_emb = self.spk_enc(spk_emb) # B,E -> B,1,E'
+        _, T = pitch_target.shape
+        enc_spk_emb = self.spk_enc(spk_emb).repeat((1, T, 1)) # B,E -> B,1,E'
         enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
 
         cond = torch.cat([enc_spk_emb, enc_pitch], dim=-1) # B,T,E'+E_p+1
+
+        cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
         z, x_rec = self.AE.forward(
             content=x.transpose(-1, -2),
@@ -108,6 +120,8 @@ class ConformerMatchaTTS(nn.Module):
             mask=mask
         )
 
+        # import pdb
+        # pdb.set_trace()
         z = z.transpose(-1, -2)
 
         x_rec = x_rec.transpose(-1, -2)
@@ -117,15 +131,18 @@ class ConformerMatchaTTS(nn.Module):
         mu = self.channel_mapping(z_pos_enc)
 
         if mu.size(1) % 2 == 1:
-            mu, mel_mask, mel_target = self._pad_to_even(mu,
-                                                         mel_mask,
-                                                         mel_target)
+            mu, mel_mask, pad_cond, mel_target = self._pad_to_even(
+                mu,
+                mel_mask,
+                cond_enc,
+                mel_target
+            )
 
         loss, _ = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
-            mask=mask,
-            spks=cond
+            mask=~mel_mask.unsqueeze(1),
+            spks=pad_cond.transpose(-1, -2),
         )
 
         return loss, x_rec
@@ -133,11 +150,17 @@ class ConformerMatchaTTS(nn.Module):
     def _pad_to_even(self,
                      mu: torch.Tensor,
                      mel_mask: torch.Tensor,
+                     cond: torch.Tensor,
                      mel_target: torch.Tensor=None):
         pad_mu = nn.functional.pad(mu,
                                    (0,0,0,1),
                                    mode='constant',
                                    value=0.0)
+        
+        pad_cond = nn.functional.pad(cond,
+                                     (0,0,0,1),
+                                     mode='constant',
+                                     value=0.0)
         pad_mask = nn.functional.pad(mel_mask,
                                      (0,1),
                                      mode='constant',
@@ -151,7 +174,7 @@ class ConformerMatchaTTS(nn.Module):
         else:
             pad_mel_target = None
             
-        return pad_mu, pad_mask, pad_mel_target
+        return pad_mu, pad_mask, pad_cond, pad_mel_target
     
     @torch.no_grad()
     def synthesis(self,
@@ -177,12 +200,15 @@ class ConformerMatchaTTS(nn.Module):
         pad_to_odd = False
         mask = ~mel_mask.unsqueeze(1)
 
-        enc_spk_emb = self.spk_enc(spk_emb) # B,E -> B,1,E'
+        _, T = pitch_target.shape
+
+        enc_spk_emb = self.spk_enc(spk_emb).repeat((1, T, 1)) # B,E -> B,1,E'
         enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
 
         cond = torch.cat([enc_spk_emb, enc_pitch], dim=-1) # B,T,E'+E_p+1
+        cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
-        z, _ = self.AE.forward(
+        z, x_rec = self.AE.forward(
             content=x.transpose(-1, -2),
             condition=cond.transpose(-1, -2),
             mask=mask
@@ -198,18 +224,23 @@ class ConformerMatchaTTS(nn.Module):
 
         if mu.size(1) % 2 == 1:
             pad_to_odd = True
-            mu, mel_mask, _ = self._pad_to_even(mu,
-                                                mel_mask)
+            mu, mel_mask, pad_cond, _ = self._pad_to_even(
+                mu,
+                mel_mask,
+                cond_enc,
+            )
 
+        import pdb
+        pdb.set_trace()
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
-            mask=mask,
+            mask=~mel_mask.unsqueeze(1),
             n_timesteps=diff_steps,
-            spks=spk_emb,
+            spks=pad_cond.transpose(-1, -2),
             temperature=temperature
         )
 
         if pad_to_odd:
             pred_mel = pred_mel[:, :, :-1]
 
-        return pred_mel.transpose(-1, -2)
+        return pred_mel.transpose(-1, -2), x_rec

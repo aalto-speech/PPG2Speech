@@ -12,9 +12,7 @@ class PitchEncoder(nn.Module):
         super().__init__()
 
         self.pitch_bins = nn.Parameter(
-            torch.exp(
-                torch.linspace(np.log(pitch_min), np.log(pitch_max), n_bins - 1)
-            ),
+            torch.linspace(pitch_min, pitch_max, n_bins - 1),
             requires_grad=False,
         )
 
@@ -35,7 +33,7 @@ class PitchEncoder(nn.Module):
         embedding = self.pitch_embedding(torch.bucketize(pitch.unsqueeze(-1), self.pitch_bins))
         out = torch.cat([embedding.squeeze(-2), v_flag.unsqueeze(-1)], dim=-1)
 
-        return out.masked_fill_(pitch_mask.unsqueeze(-1), 0.0)
+        return out.masked_fill(pitch_mask.unsqueeze(-1), 0.0)
 
 class VarianceAdaptor(nn.Module):
     """

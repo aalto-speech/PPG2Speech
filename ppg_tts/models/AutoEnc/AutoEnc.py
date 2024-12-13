@@ -72,4 +72,4 @@ class AutoEncoder(nn.Module):
 
         x = self.dec(z_dec)
 
-        return z.masked_fill_(mask, 0.0), x.masked_fill_(mask, 0.0)
+        return z.masked_fill(mask, 0.0), x.masked_fill(mask, 0.0)
