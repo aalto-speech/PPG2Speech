@@ -43,7 +43,7 @@ class ConformerMatchaTTS(nn.Module):
         self.AE = AutoEncoder(
             input_channel=ppg_dim,
             hidden_channel=encode_dim,
-            cond_channel=encode_dim + pitch_emb_size + 1
+            cond_channel=encode_dim
         )
         
         self.rope = RotaryPositionalEmbeddings(
@@ -107,7 +107,7 @@ class ConformerMatchaTTS(nn.Module):
         mask = ~mel_mask.unsqueeze(1)
 
         _, T = pitch_target.shape
-        enc_spk_emb = self.spk_enc(spk_emb).repeat((1, T, 1)) # B,E -> B,1,E'
+        enc_spk_emb = self.spk_enc(spk_emb).repeat((1, T, 1)) # B,E -> B,T,E'
         enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
 
         cond = torch.cat([enc_spk_emb, enc_pitch], dim=-1) # B,T,E'+E_p+1
@@ -116,7 +116,7 @@ class ConformerMatchaTTS(nn.Module):
 
         z, x_rec = self.AE.forward(
             content=x.transpose(-1, -2),
-            condition=cond.transpose(-1, -2),
+            condition=enc_spk_emb.transpose(-1, -2),
             mask=mask
         )
 
@@ -208,7 +208,7 @@ class ConformerMatchaTTS(nn.Module):
 
         z, x_rec = self.AE.forward(
             content=x.transpose(-1, -2),
-            condition=cond.transpose(-1, -2),
+            condition=enc_spk_emb.transpose(-1, -2),
             mask=mask
         )
 
