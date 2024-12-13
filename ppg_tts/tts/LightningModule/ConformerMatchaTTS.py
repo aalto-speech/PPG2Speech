@@ -29,7 +29,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  diff_steps: int=300,
                  temperature: float=0.667,
                  ae_kernel_sizes: List[int] = [3,3,1],
-                 ae_dilations: List[int] = [2,4,8]):
+                 ae_dilations: List[int] = [2,4,8],
+                 first_stage_steps: int = 100000):
         super().__init__()
 
         with open(pitch_stats, "r") as reader:
@@ -38,7 +39,7 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.save_hyperparameters()
 
         self.lr = lr
-        self.lr_scheduler = lr_scheduler
+        self.scheduler = lr_scheduler
         self.warm_up_steps = warm_up_steps
         self.gamma = gamma
         self.no_ctc = no_ctc
@@ -46,6 +47,8 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.temperature = temperature
         self.pitch_min = self.pitch_stats['pitch_min']
         self.pitch_max = self.pitch_stats['pitch_max']
+
+        self.first_stage_steps = first_stage_steps
 
         self.model = ConformerMatchaTTS(
             ppg_dim=ppg_dim,
@@ -83,8 +86,19 @@ class ConformerMatchaTTSModel(L.LightningModule):
             "train/diffusion_loss": loss,
             "train/ae_reconstruct_loss": ae_loss,
         })
+
+        if self.global_step < self.first_stage_steps:
+            return ae_loss
         
-        return loss + ae_loss
+        return loss
+    
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        super().on_train_batch_end(outputs, batch, batch_idx)
+
+        if self.global_step == self.first_stage_steps:
+            curr_scheduler = self.lr_schedulers()
+            curr_scheduler.base_lrs = [self.lr]
+            curr_scheduler.step(0)
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
@@ -162,20 +176,20 @@ class ConformerMatchaTTSModel(L.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(),
                                       lr=self.lr)
         
-        if self.lr_scheduler == 'plateau':
+        if self.scheduler == 'plateau':
             lr_scheduler = LRScheduler.ReduceLROnPlateau(
                 optimizer=optimizer,
                 patience=2,
                 factor=0.5
             )
-        elif self.lr_scheduler == 'noam':
+        elif self.scheduler == 'noam':
             schedule_fn = lambda s: \
                 (self.model_size ** -0.5) * \
                     min((s + 1) ** -0.5, \
                         (s + 1) * self.warm_up_steps ** -1.5)
             lr_scheduler = LRScheduler.LambdaLR(optimizer=optimizer,
                                                  lr_lambda=schedule_fn)
-        elif self.lr_scheduler == 'exponential':
+        elif self.scheduler == 'exponential':
             lr_scheduler = LRScheduler.ExponentialLR(optimizer=optimizer,
                                                       gamma=self.gamma)
         return {"optimizer": optimizer,
