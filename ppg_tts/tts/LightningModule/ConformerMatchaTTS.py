@@ -22,15 +22,14 @@ class ConformerMatchaTTSModel(L.LightningModule):
                  sigma_min: float=1e-4,
                  transformer_type: str='conformer',
                  lr: float=1e-4,
-                 lr_scheduler: str="plateau",
-                 warm_up_steps: int=25000,
                  gamma: float=0.98,
                  no_ctc: bool=False,
                  diff_steps: int=300,
                  temperature: float=0.667,
                  ae_kernel_sizes: List[int] = [3,3,1],
                  ae_dilations: List[int] = [2,4,8],
-                 first_stage_steps: int = 100000):
+                 first_stage_steps: int = 100000,
+                 **kwargs):
         super().__init__()
 
         with open(pitch_stats, "r") as reader:
@@ -39,8 +38,6 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.save_hyperparameters()
 
         self.lr = lr
-        self.scheduler = lr_scheduler
-        self.warm_up_steps = warm_up_steps
         self.gamma = gamma
         self.no_ctc = no_ctc
         self.diffusion_steps = diff_steps
@@ -68,6 +65,21 @@ class ConformerMatchaTTSModel(L.LightningModule):
             ae_dilations=ae_dilations
         )
 
+        self.first_stage_params = [
+            self.model.AE.parameters(),
+            self.model.spk_enc.parameters()
+        ]
+
+        self.second_stage_params = [
+            self.model.cfm.parameters(),
+            self.model.pitch_encoder.parameters(),
+            self.model.rope.parameters(),
+            self.model.channel_mapping.parameters(),
+            self.model.cond_channel_mapping.parameters()
+        ]
+
+        self.automatic_optimization = False
+
         self.ae_loss = torch.nn.L1Loss()
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
@@ -81,24 +93,36 @@ class ConformerMatchaTTSModel(L.LightningModule):
         )
 
         ae_loss = self.ae_loss(batch['ppg'], x_rec)
-        
-        self.log_dict({
-            "train/diffusion_loss": loss,
-            "train/ae_reconstruct_loss": ae_loss,
-        })
 
-        if self.global_step < self.first_stage_steps:
+        stage1_opt, stage2_opt = self.optimizers()
+
+        if self.global_step < self.first_stage_steps: # In stage 1, train autoencoder
+            self.log_dict({
+                "train/ae_reconstruct_loss": ae_loss,
+            })
+            stage1_opt.optimizer.zero_grad()
+            self.manual_backward(ae_loss)
+            stage1_opt.step()
+
+            if self.trainer.is_last_batch:
+                sch1, _ = self.lr_schedulers()
+                sch1.step()
+
             return ae_loss
-        
-        return loss
-    
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        super().on_train_batch_end(outputs, batch, batch_idx)
 
-        if self.global_step == self.first_stage_steps:
-            curr_scheduler = self.lr_schedulers()
-            curr_scheduler.base_lrs = [self.lr]
-            curr_scheduler.step(0)
+        else: # In stage 2, train diffuser
+            self.log_dict({
+                "train/diffusion_loss": loss,
+            })
+            stage2_opt.optimizer.zero_grad()
+            self.manual_backward(loss=loss)
+            stage2_opt.step()
+
+            if self.trainer.is_last_batch:
+                _, sch2 = self.lr_schedulers()
+                sch2.step()       
+        
+            return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
@@ -173,28 +197,26 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return pred_mel
     
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(),
-                                      lr=self.lr)
+        stage1_optimizer = torch.optim.AdamW(
+            self.first_stage_params,
+            lr=self.lr
+        )
+
+        stage2_optimizer = torch.optim.AdamW(
+            self.second_stage_params,
+            lr=self.lr
+        )
         
-        if self.scheduler == 'plateau':
-            lr_scheduler = LRScheduler.ReduceLROnPlateau(
-                optimizer=optimizer,
-                patience=2,
-                factor=0.5
-            )
-        elif self.scheduler == 'noam':
-            schedule_fn = lambda s: \
-                (self.model_size ** -0.5) * \
-                    min((s + 1) ** -0.5, \
-                        (s + 1) * self.warm_up_steps ** -1.5)
-            lr_scheduler = LRScheduler.LambdaLR(optimizer=optimizer,
-                                                 lr_lambda=schedule_fn)
-        elif self.scheduler == 'exponential':
-            lr_scheduler = LRScheduler.ExponentialLR(optimizer=optimizer,
-                                                      gamma=self.gamma)
-        return {"optimizer": optimizer,
-                "lr_scheduler": lr_scheduler,
-                "monitor": "val/mel_loss"}
+        stage1_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=stage1_optimizer,
+            gamma=self.gamma
+        )
+
+        stage2_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=stage2_optimizer,
+            gamma=self.gamma
+        )
+        return [stage1_optimizer, stage2_optimizer], [stage1_lr_scheduler, stage2_lr_scheduler]
     
     def on_fit_end(self):
         self.trainer.test(ckpt_path='best',

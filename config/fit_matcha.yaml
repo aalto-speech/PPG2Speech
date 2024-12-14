@@ -69,8 +69,6 @@ model:
     target_dim: 80
     sigma_min: 1e-4
     lr: 1e-4
-    lr_scheduler: exponential
-    warm_up_steps: 25000
     gamma: 0.99
     no_ctc: false
     diff_steps: 10
