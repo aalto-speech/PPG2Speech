@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch import nn
 from collections import OrderedDict
+from .AutoEnc.AutoEnc import ResidualConvLayer
 
 class PitchEncoder(nn.Module):
     def __init__(self,
@@ -146,6 +147,17 @@ class SpeakerEmbeddingEncoder(nn.Module):
                 kernel_size=1,
             ),
             nn.ReLU(),
+            ResidualConvLayer(
+                channels=output_size,
+                kernel_size=1,
+                dilation=1
+            )
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels=output_size,
+                out_channels=output_size,
+                kernel_size=1,
+            ),
         )
 
     def forward(self, spk_embs: torch.Tensor) -> torch.Tensor:
