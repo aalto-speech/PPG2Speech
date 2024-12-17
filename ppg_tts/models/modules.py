@@ -151,7 +151,7 @@ class SpeakerEmbeddingEncoder(nn.Module):
                 channels=output_size,
                 kernel_size=1,
                 dilation=1
-            )
+            ),
             nn.ReLU(),
             nn.Conv1d(
                 in_channels=output_size,
