@@ -1,4 +1,5 @@
 import torch
+from einops import rearrange, repeat
 from torch import nn
 from typing import Tuple, List
 
@@ -41,6 +42,7 @@ class ResidualConvLayer(nn.Module):
         """Forward pass for the residual convolution layer."""
 
         if cond is not None:
+            cond = repeat(cond, 'b s -> b s t', t = x.size(-1))
             # FiLM layer between cond and x:
             z_cond = self.cond_path(cond)
 
@@ -129,14 +131,16 @@ class AutoEncoder(nn.Module):
                 mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
-            content: content representation from the content encoder of shape (B, E, T)
-            condition: condition of shape (B, E', T)
-            mask: mask of shape (B, 1, T)
+            content: content representation from the content encoder of shape (B, T, E)
+            condition: condition of shape (B, T, E')
+            mask: mask of shape (B, T)
         Return:
-            z: hidden representation of shape (B, Hid, T)
+            z: hidden representation of shape (B, T, Hid)
             x: reconstruct signal with the same shape as content
         """
-        z = content
+        z = rearrange(content, 'b t e -> b e t')
+
+        mask = rearrange(mask, 'b t -> b 1 t')
 
         for layer in self.enc:
             z = layer(z)
@@ -151,4 +155,5 @@ class AutoEncoder(nn.Module):
 
         z_dec = self.output(z_dec)
 
-        return z.masked_fill(mask, 0.0), z_dec.masked_fill(mask, 0.0)
+        return rearrange(z.masked_fill(mask, 0.0), 'b h t -> b t h'),\
+            rearrange(z_dec.masked_fill(mask, 0.0), 'b e t -> b t e')

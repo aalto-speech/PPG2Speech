@@ -53,6 +53,8 @@ class QuantizeLayer(nn.Module):
 
         z_q = einops.rearrange(self.embedding(center_idx), "(b t) e -> b t e", b=x.shape[0])
 
+        z_q = x + (z_q - x).detach() # copy gradient from x
+
         z_q = z_q.masked_fill(mask, 0.0)
 
         embedding_loss = self.embedding_loss(x_sg, z_q)
