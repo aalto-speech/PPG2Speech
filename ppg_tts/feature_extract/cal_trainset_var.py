@@ -13,7 +13,7 @@ if __name__ == "__main__":
     
     for i, key in enumerate(d):
         array = d[key]
-        var = (var * i + array.var()) / (i + 1)
+        var = (var * i + array.var(axis=1).sum() / array.shape[0]) / (i + 1)
         logger.info(f"{key}: current running variance {var}")
 
     with open(f"{args.data_dir}/variance.json", "w") as writter:
