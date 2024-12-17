@@ -1,3 +1,4 @@
+import torch
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,6 +8,23 @@ class RunTestOnFitEndCallback(pl.Callback):
     def on_fit_end(self, trainer, pl_module):
         trainer.test(ckpt_path='best',
                      datamodule=trainer.datamodule)
+        
+def save_figure_to_numpy(fig):
+    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    return data
+
+        
+def plot_tensor_wandb(t: torch.Tensor):
+    plt.style.use("default")
+    fig, ax = plt.subplots(figsize=(12, 3))
+    im = ax.imshow(t, aspect="auto", origin="lower", interpolation="none")
+    plt.colorbar(im, ax=ax)
+    plt.tight_layout()
+    fig.canvas.draw()
+    data = save_figure_to_numpy(fig)
+    plt.close()
+    return data
 
 def plot_mel(mel: np.ndarray, path: str, key: str):
     if not os.path.exists(path):
