@@ -1,5 +1,5 @@
 import torch
-from einops import rearrange, repeat
+from einops import rearrange
 from torch import nn
 from typing import Tuple, List
 
@@ -42,7 +42,7 @@ class ResidualConvLayer(nn.Module):
         """Forward pass for the residual convolution layer."""
 
         if cond is not None:
-            cond = repeat(cond, 'b s -> b s t', t = x.size(-1))
+            cond = rearrange(cond, 'b s -> b s 1')
             # FiLM layer between cond and x:
             z_cond = self.cond_path(cond)
 

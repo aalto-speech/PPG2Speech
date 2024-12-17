@@ -62,7 +62,7 @@ model:
   init_args:
     pitch_stats: /scratch/elec/t412-speechsynth/DATA/fin-mix/train/stats.json
     ppg_dim: 34
-    ppg_variance: 0.48978831117228916
+    ppg_variance: 0.4897841937287568
     num_emb: 32
     encode_dim: 64
     spk_emb_size: 512
