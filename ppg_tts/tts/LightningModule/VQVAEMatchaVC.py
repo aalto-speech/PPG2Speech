@@ -32,6 +32,7 @@ class VQVAEMatchaVC(L.LightningModule):
                  ae_kernel_sizes: List[int] = [3,3,1],
                  ae_dilations: List[int] = [2,4,8],
                  first_stage_steps: int = 100000,
+                 lr_scheduler_interval: int = 1500,
                  **kwargs):
         super().__init__()
 
@@ -48,6 +49,7 @@ class VQVAEMatchaVC(L.LightningModule):
         self.pitch_min = self.pitch_stats['pitch_min']
         self.pitch_max = self.pitch_stats['pitch_max']
         self.ppg_variance = ppg_variance
+        self.lr_scheduler_interval = lr_scheduler_interval
 
         self.first_stage_steps = first_stage_steps
 
@@ -109,7 +111,7 @@ class VQVAEMatchaVC(L.LightningModule):
             self.manual_backward(total_loss)
             stage1_opt.step()
 
-            if self.global_step % 1250 == 0:
+            if self.global_step % self.lr_scheduler_interval == 0:
                 sch1, _ = self.lr_schedulers()
                 sch1.step()
 
@@ -123,7 +125,7 @@ class VQVAEMatchaVC(L.LightningModule):
             self.manual_backward(loss=loss)
             stage2_opt.step()
 
-            if self.global_step % 1250 == 0:
+            if self.global_step % self.lr_scheduler_interval == 0:
                 _, sch2 = self.lr_schedulers()
                 sch2.step()       
         
