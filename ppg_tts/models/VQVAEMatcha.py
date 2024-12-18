@@ -97,7 +97,8 @@ class VQVAEMatcha(nn.Module):
                 pitch_target: torch.Tensor,
                 v_flag: torch.Tensor,
                 mel_target: torch.Tensor,
-                mel_mask: torch.Tensor) \
+                mel_mask: torch.Tensor,
+                joint_flag: bool) \
         -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Arguments:
@@ -130,7 +131,10 @@ class VQVAEMatcha(nn.Module):
             mask=~mel_mask
         )
 
-        z_diff = z_q.detach()
+        if not joint_flag:
+            z_diff = z_q.detach()
+        else:
+            z_diff = z_q
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 

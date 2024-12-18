@@ -79,7 +79,8 @@ model:
     temperature: 0.667
     ae_kernel_sizes: [3,3,1]
     ae_dilations: [2,4,8]
-    first_stage_steps: 100000
+    first_stage_steps: 5000
+    second_stage_steps: 5000
     lr_scheduler_interval: 1500
 optimizer: null
 lr_scheduler: null

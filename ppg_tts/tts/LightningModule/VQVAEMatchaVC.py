@@ -31,7 +31,8 @@ class VQVAEMatchaVC(L.LightningModule):
                  temperature: float=0.667,
                  ae_kernel_sizes: List[int] = [3,3,1],
                  ae_dilations: List[int] = [2,4,8],
-                 first_stage_steps: int = 100000,
+                 first_stage_steps: int = 10000,
+                 second_stage_steps: int = 100000,
                  lr_scheduler_interval: int = 1500,
                  **kwargs):
         super().__init__()
@@ -52,6 +53,7 @@ class VQVAEMatchaVC(L.LightningModule):
         self.lr_scheduler_interval = lr_scheduler_interval
 
         self.first_stage_steps = first_stage_steps
+        self.second_stage_steps = second_stage_steps
 
         self.model = VQVAEMatcha(
             ppg_dim=ppg_dim,
@@ -87,18 +89,20 @@ class VQVAEMatchaVC(L.LightningModule):
         self.ae_loss = torch.nn.MSELoss()
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
+        joint_flag = self.global_step >= (self.first_stage_steps + self.second_stage_steps)
         loss, x_rec, emb_loss, commitment_loss = self.model.forward(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
             mel_target=batch['mel'],
-            mel_mask=batch['mel_mask']
+            mel_mask=batch['mel_mask'],
+            joint_flag=joint_flag,
         )
 
         ae_loss = self.ae_loss(batch['ppg'], x_rec) / self.ppg_variance
 
-        stage1_opt, stage2_opt = self.optimizers()
+        stage1_opt, stage2_opt, stage3_opt = self.optimizers()
 
         if self.global_step < self.first_stage_steps: # In stage 1, train vqvae
             self.log_dict({
@@ -112,12 +116,12 @@ class VQVAEMatchaVC(L.LightningModule):
             stage1_opt.step()
 
             if self.global_step % self.lr_scheduler_interval == 0:
-                sch1, _ = self.lr_schedulers()
+                sch1, _, _ = self.lr_schedulers()
                 sch1.step()
 
             return total_loss
 
-        else: # In stage 2, train diffuser
+        elif self.first_stage_steps <= self.global_step < self.first_stage_steps + self.second_stage_steps: # In stage 2, train diffuser
             self.log_dict({
                 "train/diffusion_loss": loss,
             })
@@ -126,10 +130,27 @@ class VQVAEMatchaVC(L.LightningModule):
             stage2_opt.step()
 
             if self.global_step % self.lr_scheduler_interval == 0:
-                _, sch2 = self.lr_schedulers()
-                sch2.step()       
-        
+                _, sch2, _ = self.lr_schedulers()
+                sch2.step()
+            
             return loss
+        else:
+            self.log_dict({
+                "train/ae_reconstruct_loss": ae_loss,
+                "train/diffusion_loss": loss,
+            })
+            stage3_opt.optimizer.zero_grad()
+            total_loss = ae_loss + loss
+            self.manual_backward(total_loss)
+            stage3_opt.step()
+
+            if self.global_step % self.lr_scheduler_interval == 0:
+                _, _, sch3 = self.lr_schedulers()
+                sch3.step()
+            
+            return loss
+        
+            return total_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
@@ -162,7 +183,7 @@ class VQVAEMatchaVC(L.LightningModule):
 
                 # log mel to wandb
                 self.logger.experiment.log({
-                    f"generate_mel/{sample_id}": wandb.Image(plot_tensor_wandb(mel.squeeze().cpu()),
+                    f"generate_mel/{sample_id}": wandb.Image(plot_tensor_wandb(mel.transpose(-1, -2).squeeze().cpu()),
                                                              caption=f"generated mel in Epoch {self.current_epoch}")
                 })
         
@@ -227,6 +248,11 @@ class VQVAEMatchaVC(L.LightningModule):
             self.second_stage_params,
             lr=self.lr
         )
+
+        stage3_optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=self.lr / 10
+        )
         
         stage1_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=stage1_optimizer,
@@ -237,7 +263,13 @@ class VQVAEMatchaVC(L.LightningModule):
             optimizer=stage2_optimizer,
             gamma=self.gamma
         )
-        return [stage1_optimizer, stage2_optimizer], [stage1_lr_scheduler, stage2_lr_scheduler]
+
+        stage3_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=stage3_optimizer,
+            gamma=self.gamma
+        )
+        return [stage1_optimizer, stage2_optimizer, stage3_optimizer],\
+            [stage1_lr_scheduler, stage2_lr_scheduler, stage3_lr_scheduler]
     
     def on_fit_end(self):
         self.trainer.test(ckpt_path='best',

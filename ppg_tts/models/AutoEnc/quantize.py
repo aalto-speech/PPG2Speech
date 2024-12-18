@@ -39,6 +39,8 @@ class QuantizeLayer(nn.Module):
 
         mask = einops.rearrange(mask, "b t -> b t 1")
 
+        x = x.masked_fill(mask, 0.0)
+
         x_sg = x.detach()
 
         x_flat = einops.rearrange(x, "b t e -> (b t) 1 e")
@@ -53,12 +55,12 @@ class QuantizeLayer(nn.Module):
 
         z_q = einops.rearrange(self.embedding(center_idx), "(b t) e -> b t e", b=x.shape[0])
 
-        z_q = x + (z_q - x).detach() # copy gradient from x
-
         z_q = z_q.masked_fill(mask, 0.0)
 
-        embedding_loss = self.embedding_loss(x_sg, z_q)
+        embedding_loss = torch.mean((x_sg - z_q) ** 2) #self.embedding_loss(z_q, x_sg)
 
-        commitment_loss = self.beta * self.commitment_loss(x, z_q.detach())
+        commitment_loss = self.beta * torch.mean((x - z_q.detach()) ** 2) # self.beta * self.commitment_loss(x, z_q.detach())
+
+        z_q = x + (z_q - x).detach()
 
         return z_q, embedding_loss, commitment_loss
