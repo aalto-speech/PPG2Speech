@@ -12,6 +12,7 @@ class VQVAEMatcha(nn.Module):
                  ppg_dim: int,
                  encode_dim: int,
                  spk_emb_size: int,
+                 spk_emb_enc_dim: int,
                  decoder_num_mid_block: int,
                  decoder_num_block: int,
                  pitch_min: float,
@@ -34,7 +35,7 @@ class VQVAEMatcha(nn.Module):
 
         self.spk_enc = SpeakerEmbeddingEncoder(
             input_size=spk_emb_size,
-            output_size=encode_dim
+            output_size=spk_emb_enc_dim
         )
 
         self.pitch_encoder = PitchEncoder(
@@ -46,7 +47,7 @@ class VQVAEMatcha(nn.Module):
         self.vqvae = VQVAE(
             input_channel=ppg_dim,
             hidden_channel=encode_dim,
-            cond_channel=encode_dim,
+            cond_channel=spk_emb_enc_dim,
             kernel_sizes=ae_kernel_sizes,
             dilations=ae_dilations,
             num_emb=num_emb,
@@ -65,7 +66,7 @@ class VQVAEMatcha(nn.Module):
 
         self.cond_channel_mapping = nn.Sequential(
             nn.Conv1d(
-                in_channels=encode_dim + pitch_emb_size + 1,
+                in_channels=spk_emb_enc_dim + pitch_emb_size + 1,
                 out_channels=encode_dim,
                 kernel_size=1
             ),
@@ -125,7 +126,7 @@ class VQVAEMatcha(nn.Module):
 
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
-            cond=spk_emb,
+            cond=enc_spk_emb,
             mask=~mel_mask
         )
 
@@ -220,7 +221,7 @@ class VQVAEMatcha(nn.Module):
 
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
-            cond=spk_emb,
+            cond=enc_spk_emb,
             mask=~mel_mask
         )
 

@@ -16,6 +16,7 @@ class VQVAEMatchaVC(L.LightningModule):
                  encode_dim: int,
                  pitch_emb_size: int,
                  spk_emb_size: int,
+                 spk_emb_enc_dim: int,
                  num_emb: int,
                  decoder_num_block: int=1,
                  decoder_num_mid_block: int=2,
@@ -54,6 +55,7 @@ class VQVAEMatchaVC(L.LightningModule):
             ppg_dim=ppg_dim,
             encode_dim=encode_dim,
             spk_emb_size=spk_emb_size,
+            spk_emb_enc_dim=spk_emb_enc_dim,
             dropout=dropout,
             target_dim=target_dim,
             num_emb=num_emb,
@@ -69,18 +71,14 @@ class VQVAEMatchaVC(L.LightningModule):
             ae_dilations=ae_dilations
         )
 
-        self.first_stage_params = [
-            self.model.vqvae.parameters(),
-            self.model.spk_enc.parameters()
-        ]
+        self.first_stage_params = list(self.model.vqvae.parameters()) + \
+            list(self.model.spk_enc.parameters())
 
-        self.second_stage_params = [
-            self.model.cfm.parameters(),
-            self.model.pitch_encoder.parameters(),
-            self.model.rope.parameters(),
-            self.model.channel_mapping.parameters(),
-            self.model.cond_channel_mapping.parameters()
-        ]
+        self.second_stage_params = list(self.model.cfm.parameters()) + \
+            list(self.model.pitch_encoder.parameters()) + \
+            list(self.model.rope.parameters()) + \
+            list(self.model.channel_mapping.parameters()) + \
+            list(self.model.cond_channel_mapping.parameters())
 
         self.automatic_optimization = False
 
@@ -111,7 +109,7 @@ class VQVAEMatchaVC(L.LightningModule):
             self.manual_backward(total_loss)
             stage1_opt.step()
 
-            if self.trainer.is_last_batch:
+            if self.global_step % 1250 == 0:
                 sch1, _ = self.lr_schedulers()
                 sch1.step()
 
@@ -125,7 +123,7 @@ class VQVAEMatchaVC(L.LightningModule):
             self.manual_backward(loss=loss)
             stage2_opt.step()
 
-            if self.trainer.is_last_batch:
+            if self.global_step % 1250 == 0:
                 _, sch2 = self.lr_schedulers()
                 sch2.step()       
         

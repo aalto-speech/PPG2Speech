@@ -4,7 +4,12 @@ from torch import nn
 from typing import Tuple, List
 
 class ResidualConvLayer(nn.Module):
-    def __init__(self, channels: int, kernel_size: int, dilation: int, cond_channel: int=None):
+    def __init__(self,
+                 channels: int,
+                 kernel_size: int,
+                 dilation: int,
+                 cond_channel: int=None,
+                 instance_norm: bool=False):
         """
         A residual convolution layer with customizable kernel size and dilation.
 
@@ -25,7 +30,10 @@ class ResidualConvLayer(nn.Module):
             dilation=dilation,
             padding=padding
         )
-        self.norm = nn.BatchNorm1d(channels)
+        if instance_norm:
+            self.norm = nn.InstanceNorm1d(channels)
+        else:
+            self.norm = nn.BatchNorm1d(channels)
         self.activation = nn.ReLU()
 
         if cond_channel is not None:
@@ -88,7 +96,7 @@ class AutoEncoder(nn.Module):
 
         for ks, d in zip(kernel_sizes, dilations):
             self.enc.append(
-                ResidualConvLayer(input_channel // 4, ks, d)
+                ResidualConvLayer(input_channel // 4, ks, d, instance_norm=True)
             )
 
         self.enc.append(

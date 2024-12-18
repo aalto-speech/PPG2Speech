@@ -37,7 +37,7 @@ class VQVAE(nn.Module):
 
         for ks, d in zip(kernel_sizes, dilations):
             self.enc.append(
-                ResidualConvLayer(input_channel // 4, ks, d)
+                ResidualConvLayer(input_channel // 4, ks, d, instance_norm=True)
             )
 
         self.enc.append(
