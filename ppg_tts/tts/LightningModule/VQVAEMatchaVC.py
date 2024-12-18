@@ -138,9 +138,11 @@ class VQVAEMatchaVC(L.LightningModule):
             self.log_dict({
                 "train/ae_reconstruct_loss": ae_loss,
                 "train/diffusion_loss": loss,
+                "train/embedding_loss": emb_loss,
+                "train/commitment_loss": commitment_loss,
             })
             stage3_opt.optimizer.zero_grad()
-            total_loss = ae_loss + loss
+            total_loss = ae_loss + loss + emb_loss + commitment_loss
             self.manual_backward(total_loss)
             stage3_opt.step()
 
@@ -148,10 +150,8 @@ class VQVAEMatchaVC(L.LightningModule):
                 _, _, sch3 = self.lr_schedulers()
                 sch3.step()
             
-            return loss
-        
             return total_loss
-
+        
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
         pred_mel, x_rec, emb_loss, commitment_loss = self.model.synthesis(
@@ -251,7 +251,7 @@ class VQVAEMatchaVC(L.LightningModule):
 
         stage3_optimizer = torch.optim.AdamW(
             self.model.parameters(),
-            lr=self.lr / 10
+            lr=self.lr
         )
         
         stage1_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
