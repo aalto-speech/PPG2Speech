@@ -102,14 +102,16 @@ class VQVAEMatchaVC(L.LightningModule):
 
         ae_loss = self.ae_loss(batch['ppg'], x_rec) / self.ppg_variance
 
+        self.log_dict({
+            "train/ae_reconstruct_loss": ae_loss,
+            "train/diffusion_loss": loss,
+            "train/embedding_loss": emb_loss,
+            "train/commitment_loss": commitment_loss,
+        })
+
         stage1_opt, stage2_opt, stage3_opt = self.optimizers()
 
         if self.global_step < self.first_stage_steps: # In stage 1, train vqvae
-            self.log_dict({
-                "train/ae_reconstruct_loss": ae_loss,
-                "train/embedding_loss": emb_loss,
-                "train/commitment_loss": commitment_loss,
-            })
             stage1_opt.optimizer.zero_grad()
             total_loss = ae_loss + emb_loss + commitment_loss
             self.manual_backward(total_loss)
@@ -120,11 +122,8 @@ class VQVAEMatchaVC(L.LightningModule):
                 sch1.step()
 
             return total_loss
-
-        elif self.first_stage_steps <= self.global_step < self.first_stage_steps + self.second_stage_steps: # In stage 2, train diffuser
-            self.log_dict({
-                "train/diffusion_loss": loss,
-            })
+        # In stage 2, train diffuser
+        elif self.first_stage_steps <= self.global_step < self.first_stage_steps + self.second_stage_steps:
             stage2_opt.optimizer.zero_grad()
             self.manual_backward(loss=loss)
             stage2_opt.step()
@@ -135,12 +134,6 @@ class VQVAEMatchaVC(L.LightningModule):
             
             return loss
         else:
-            self.log_dict({
-                "train/ae_reconstruct_loss": ae_loss,
-                "train/diffusion_loss": loss,
-                "train/embedding_loss": emb_loss,
-                "train/commitment_loss": commitment_loss,
-            })
             stage3_opt.optimizer.zero_grad()
             total_loss = ae_loss + loss + emb_loss + commitment_loss
             self.manual_backward(total_loss)
