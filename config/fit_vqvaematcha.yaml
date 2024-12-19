@@ -70,6 +70,7 @@ model:
     pitch_emb_size: 16
     dropout: 0.1
     target_dim: 80
+    decoder_num_mid_block: 2
     sigma_min: 1e-4
     lr: 1e-4
     gamma: 0.99

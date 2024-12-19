@@ -21,10 +21,6 @@ class QuantizeLayer(nn.Module):
 
         self.embedding.weight.data.uniform_(-1.0 / num_emb, 1.0 / num_emb)
 
-        self.embedding_loss = nn.MSELoss()
-
-        self.commitment_loss = nn.MSELoss()
-
     def forward(self, x: torch.Tensor, mask: torch.Tensor) \
         -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """

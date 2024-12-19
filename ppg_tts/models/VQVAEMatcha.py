@@ -148,6 +148,8 @@ class VQVAEMatcha(nn.Module):
                 mel_target
             )
 
+        mu = mu.masked_fill(~mel_mask.unsqueeze(-1), 0.0)
+
         loss, _ = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
@@ -242,6 +244,8 @@ class VQVAEMatcha(nn.Module):
                 mel_mask,
                 cond_enc,
             )
+
+        mu = mu.masked_fill(~mel_mask.unsqueeze(-1), 0.0)
 
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
