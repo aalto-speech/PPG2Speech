@@ -112,9 +112,6 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
         )
 
         ppg = torch.from_numpy(self.ppgs[key].copy())
-        T = mel.size(-1)
-
-        ppg = self._interpolate(ppg, T)
 
         return {"key": key,
                 "feature": waveform,
