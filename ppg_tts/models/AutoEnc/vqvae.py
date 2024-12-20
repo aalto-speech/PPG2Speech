@@ -95,9 +95,11 @@ class VQVAE(nn.Module):
             commitment loss
         """
         z = rearrange(x, 'b t e -> b e t')
+        m = rearrange(mask, 'b t -> b 1 t')
 
         for layer in self.enc:
             z = layer(z)
+            z = z.masked_fill(m, 0.0)
 
         z = rearrange(z, 'b e t -> b t e')
 
@@ -110,6 +112,7 @@ class VQVAE(nn.Module):
                 z_dec = layer(z_dec)
             else:
                 z_dec = layer(z_dec, cond)
+            z_dec = z_dec.masked_fill(m, 0.0)
 
         z_dec = rearrange(self.output(z_dec), 'b e t -> b t e')
 

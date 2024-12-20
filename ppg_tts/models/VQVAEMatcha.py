@@ -98,7 +98,8 @@ class VQVAEMatcha(nn.Module):
                 v_flag: torch.Tensor,
                 mel_target: torch.Tensor,
                 mel_mask: torch.Tensor,
-                joint_flag: bool) \
+                joint_flag: bool,
+                x_mask: torch.Tensor,) \
         -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Arguments:
@@ -108,6 +109,7 @@ class VQVAEMatcha(nn.Module):
             v_flag: shape (B, T_mel)
             mel_target: shape (B, T, E),
             mel_mask: shape (B, T), bool tensor
+            x_mask: optional mask for input PPG. Shape (B, T_ppg). Could be the same as mel_mask
         Returns:
             diffusion loss
             reconstructed x
@@ -128,13 +130,25 @@ class VQVAEMatcha(nn.Module):
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
             cond=enc_spk_emb,
-            mask=~mel_mask
+            mask=(~mel_mask if x_mask is None else ~x_mask)
         )
 
+        #! Upsample z_q to pitch time resolution
+
         if not joint_flag:
-            z_diff = z_q.detach()
+            z_diff = nn.functional.interpolate(
+                z_q.detach().permute(0,2,1),
+                size=T,
+                mode='linear',
+                align_corners=True
+            ).transpose(-1,-2)
         else:
-            z_diff = z_q
+            z_diff = nn.functional.interpolate(
+                z_q.permute(0,2,1),
+                size=T,
+                mode='linear',
+                align_corners=True
+            ).transpose(-1,-2)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 
@@ -196,7 +210,8 @@ class VQVAEMatcha(nn.Module):
                   v_flag: torch.Tensor,
                   mel_mask: torch.Tensor,
                   diff_steps: int=300,
-                  temperature: float=0.667) \
+                  temperature: float=0.667,
+                  x_mask: torch.Tensor = None,) \
         -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Arguments:
@@ -206,6 +221,7 @@ class VQVAEMatcha(nn.Module):
             v_flag: shape (B, T_mel)
             mel_target: shape (B, T, E),
             mel_mask: shape (B, T), bool tensor
+            x_mask: optional mask for input PPG. Shape (B, T_ppg). Could be the same as mel_mask
         Returns:
             pred_mel: shape (B, T, 80)
             reconstructed x: same shape as x
@@ -228,10 +244,16 @@ class VQVAEMatcha(nn.Module):
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
             cond=enc_spk_emb,
-            mask=~mel_mask
+            mask=(~mel_mask if x_mask is None else ~x_mask)
         )
 
-        z_diff = z_q.detach()
+        #! Upsample z_q to pitch time resolution
+        z_diff = nn.functional.interpolate(
+            z_q.permute(0,2,1),
+            size=T,
+            mode='linear',
+            align_corners=True
+        ).transpose(-1,-2)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 

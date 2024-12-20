@@ -118,9 +118,9 @@ class ExtendDataset(BaseDataset):
         )
 
         ppg = torch.from_numpy(self.ppgs[key].copy())
-        T = mel.size(-1)
+        # T = mel.size(-1)
 
-        ppg = self._interpolate(ppg, T)
+        # ppg = self._interpolate(ppg, T)
 
         return {"key": key,
                 "feature": wav,
