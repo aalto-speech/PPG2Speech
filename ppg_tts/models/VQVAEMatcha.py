@@ -171,7 +171,7 @@ class VQVAEMatcha(nn.Module):
         loss, _ = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
-            mask=~mel_mask.unsqueeze(1),
+            mask=mel_mask.transpose(-1, -2),
             spks=cond_enc.transpose(-1, -2),
         )
 
@@ -192,7 +192,7 @@ class VQVAEMatcha(nn.Module):
                                      mode='constant',
                                      value=0.0)
         pad_mask = nn.functional.pad(mel_mask,
-                                     (0,1),
+                                     (0,0,0,1),
                                      mode='constant',
                                      value=True)
 
@@ -277,7 +277,7 @@ class VQVAEMatcha(nn.Module):
 
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
-            mask=~mel_mask.unsqueeze(1),
+            mask=mel_mask.transpose(-1, -2),
             n_timesteps=diff_steps,
             spks=cond_enc.transpose(-1, -2),
             temperature=temperature

@@ -34,7 +34,7 @@ class PitchEncoder(nn.Module):
         embedding = self.pitch_embedding(torch.bucketize(pitch.unsqueeze(-1), self.pitch_bins))
         out = torch.cat([embedding.squeeze(-2), v_flag.unsqueeze(-1)], dim=-1)
 
-        return out.masked_fill(pitch_mask.unsqueeze(-1), 0.0)
+        return out.masked_fill(pitch_mask, 0.0)
 
 class VarianceAdaptor(nn.Module):
     """
