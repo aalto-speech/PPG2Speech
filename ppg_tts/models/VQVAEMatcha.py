@@ -25,7 +25,8 @@ class VQVAEMatcha(nn.Module):
                  sigma_min: float=1e-4,
                  transformer_type: str='conformer',
                  ae_kernel_sizes: List[int] = [3,3,1],
-                 ae_dilations: List[int] = [2,4,8]):
+                 ae_dilations: List[int] = [2,4,8],
+                 **kwargs):
         super(VQVAEMatcha, self).__init__()
 
         self.no_ctc = no_ctc
@@ -116,9 +117,10 @@ class VQVAEMatcha(nn.Module):
             embedding loss
             commitment loss
         """
+        mel_mask = ~mel_mask.unsqueeze(-1)
         _, T = pitch_target.shape
-        enc_spk_emb = self.spk_enc(spk_emb).squeeze() # B,E -> B,E'
-        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
+        enc_spk_emb = self.spk_enc(spk_emb).squeeze(1) # B,E -> B,E'
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,1 -> B,T,E_p+1
 
         cond = torch.cat([
             repeat(enc_spk_emb, 'b e -> b t e', t=T),
@@ -127,10 +129,12 @@ class VQVAEMatcha(nn.Module):
 
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
+        cond_enc = cond_enc.masked_fill(mel_mask, 0.0)
+
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
             cond=enc_spk_emb,
-            mask=(~mel_mask if x_mask is None else ~x_mask)
+            mask=~x_mask,
         )
 
         #! Upsample z_q to pitch time resolution
@@ -162,7 +166,7 @@ class VQVAEMatcha(nn.Module):
                 mel_target
             )
 
-        mu = mu.masked_fill(~mel_mask.unsqueeze(-1), 0.0)
+        mu = mu.masked_fill(mel_mask, 0.0)
 
         loss, _ = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
@@ -228,11 +232,11 @@ class VQVAEMatcha(nn.Module):
             embedding loss
             commitment loss
         """
-
+        mel_mask = ~mel_mask.unsqueeze(-1)
         pad_to_odd = False
         _, T = pitch_target.shape
-        enc_spk_emb = self.spk_enc(spk_emb).squeeze() # B,E -> B,E'
-        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,P -> B,T,E_p+1
+        enc_spk_emb = self.spk_enc(spk_emb).squeeze(1) # B,E -> B,E'
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,1 -> B,T,E_p+1
 
         cond = torch.cat([
             repeat(enc_spk_emb, 'b e -> b t e', t=T),
@@ -241,10 +245,12 @@ class VQVAEMatcha(nn.Module):
 
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
+        cond_enc = cond_enc.masked_fill(mel_mask, 0.0)
+
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
             cond=enc_spk_emb,
-            mask=(~mel_mask if x_mask is None else ~x_mask)
+            mask=~x_mask,
         )
 
         #! Upsample z_q to pitch time resolution
@@ -267,7 +273,7 @@ class VQVAEMatcha(nn.Module):
                 cond_enc,
             )
 
-        mu = mu.masked_fill(~mel_mask.unsqueeze(-1), 0.0)
+        mu = mu.masked_fill(mel_mask, 0.0)
 
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),

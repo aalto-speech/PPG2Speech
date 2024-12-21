@@ -8,7 +8,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from typing import Tuple
 from ..dataset import ExtendDataset, PersoCollateFn
-from ..models import ConformerMatchaTTS
+from ..models import VQVAEMatcha
 from ..utils import build_parser
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
@@ -26,21 +26,12 @@ if __name__ == "__main__":
 
     logger.info(f"Load checkpoint from {args.ckpt}, device is {args.device}")
 
-    model = ConformerMatchaTTS(
-        ppg_dim=ckpt['hyper_parameters']['ppg_dim'],
-        encode_dim=ckpt['hyper_parameters']['encode_dim'],
-        encode_heads=ckpt['hyper_parameters']['encode_heads'],
-        encode_layers=ckpt['hyper_parameters']['encode_layers'],
-        encode_ffn_dim=ckpt['hyper_parameters']['encode_ffn_dim'],
-        encode_kernel_size=ckpt['hyper_parameters']['encode_kernel_size'],
-        spk_emb_size=ckpt['hyper_parameters']['spk_emb_size'],
-        decoder_num_block=ckpt['hyper_parameters']['decoder_num_block'],
-        decoder_num_mid_block=ckpt['hyper_parameters']['decoder_num_mid_block'],
-        dropout=ckpt['hyper_parameters']['dropout'],
-        target_dim=ckpt['hyper_parameters']['target_dim'],
-        sigma_min=ckpt['hyper_parameters']['sigma_min'],
-        transformer_type=ckpt['hyper_parameters']['transformer_type'],
-        no_ctc=ckpt['hyper_parameters']['no_ctc'],
+    with open(ckpt['hyper_parameters']['pitch_stats'], "r") as reader:
+            pitch_stats = json.load(reader)
+
+    model = VQVAEMatcha(
+        **ckpt['hyper_parameters'],
+        **pitch_stats,
     )
 
     weights = {k.replace('model.', ''): v for k, v in ckpt['state_dict'].items()}
@@ -71,6 +62,8 @@ if __name__ == "__main__":
 
     speaker_mapping = open(mel_save_dir / "speaker_mapping", "w")
 
+    model.eval()
+
     for i, testdata in enumerate(testloader):
         # Inference mel spectrogram
         source_key = testdata['keys'][0]
@@ -86,12 +79,12 @@ if __name__ == "__main__":
 
         shifted_pitch = testdata['log_F0'] * target_median / curr_median
 
-        pred_mel = model.synthesis(
+        pred_mel, _, _, _ = model.synthesis(
             x=testdata['ppg'],
+            x_mask=testdata['ppg_mask'],
             spk_emb=target_spk_emb.unsqueeze(0),
             pitch_target=shifted_pitch,
             v_flag=testdata['v_flag'],
-            energy_length=testdata['energy_len'],
             mel_mask=testdata['mel_mask'],
             diff_steps=ckpt['hyper_parameters']['diff_steps'],
             temperature=ckpt['hyper_parameters']['temperature']
