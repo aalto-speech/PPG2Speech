@@ -34,6 +34,7 @@ class VQVAEMatchaVC(L.LightningModule):
                  first_stage_steps: int = 10000,
                  second_stage_steps: int = 100000,
                  lr_scheduler_interval: int = 1500,
+                 n_trans_layers: int=2,
                  **kwargs):
         super().__init__()
 
@@ -72,7 +73,8 @@ class VQVAEMatchaVC(L.LightningModule):
             pitch_max=self.pitch_max,
             pitch_emb_size=pitch_emb_size,
             ae_kernel_sizes=ae_kernel_sizes,
-            ae_dilations=ae_dilations
+            ae_dilations=ae_dilations,
+            n_trans_layers=n_trans_layers,
         )
 
         self.first_stage_params = list(self.model.vqvae.parameters()) + \

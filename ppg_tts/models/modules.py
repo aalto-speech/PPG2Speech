@@ -1,8 +1,58 @@
 import torch
 import numpy as np
+from einops import rearrange
 from torch import nn
 from collections import OrderedDict
 from .AutoEnc.AutoEnc import ResidualConvLayer
+
+class HiddenEncoder(nn.Module):
+    def __init__(self,
+                 input_channel: int,
+                 output_channel: int,
+                 n_layers: int,
+                 activation: str='gelu',
+                 ):
+        super(HiddenEncoder, self).__init__()
+
+        self.transformer_layers = nn.ModuleList()
+
+        for _ in range(n_layers):
+            self.transformer_layers.append(
+                nn.TransformerEncoderLayer(
+                    d_model=input_channel,
+                    nhead=4,
+                    dim_feedforward=4 * input_channel,
+                    batch_first=True,
+                    activation=activation,
+                )
+            )
+
+        self.output = nn.Conv1d(
+            in_channels=input_channel,
+            out_channels=output_channel,
+            kernel_size=1
+        )
+
+    def forward(self,
+                x: torch.Tensor,
+                mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: shape (B, T, E)
+            mask: shape (B, T, 1)
+        Returns:
+            shape (B, T, E_out)
+        """
+        for layer in self.transformer_layers:
+            x = layer(x, src_key_padding_mask=mask.squeeze(-1))
+
+        x_reshape = rearrange(x, 'b t c -> b c t')
+
+        out = self.output(x_reshape)
+
+        out = rearrange(out, 'b c t -> b t c')
+
+        return out.masked_fill(mask, 0.0)
 
 class PitchEncoder(nn.Module):
     def __init__(self,

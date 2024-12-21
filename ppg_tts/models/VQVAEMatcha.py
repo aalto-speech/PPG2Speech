@@ -3,7 +3,7 @@ from einops import repeat
 from torch import nn
 from .matcha.flow_matching import CFM
 from .matcha.RoPE import RotaryPositionalEmbeddings
-from .modules import PitchEncoder, SpeakerEmbeddingEncoder
+from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder
 from .AutoEnc import VQVAE
 from typing import List, Tuple
 
@@ -26,6 +26,7 @@ class VQVAEMatcha(nn.Module):
                  transformer_type: str='conformer',
                  ae_kernel_sizes: List[int] = [3,3,1],
                  ae_dilations: List[int] = [2,4,8],
+                 n_trans_layers: int = 2,
                  **kwargs):
         super(VQVAEMatcha, self).__init__()
 
@@ -58,11 +59,10 @@ class VQVAEMatcha(nn.Module):
             d=encode_dim
         )
 
-        self.channel_mapping = nn.Sequential(
-            nn.Linear(encode_dim, target_dim),
-            nn.LayerNorm(target_dim),
-            nn.ReLU(),
-            nn.Dropout(p=dropout)
+        self.channel_mapping = HiddenEncoder(
+            input_channel=encode_dim,
+            output_channel=target_dim,
+            n_layers=n_trans_layers,
         )
 
         self.cond_channel_mapping = nn.Sequential(
@@ -138,7 +138,6 @@ class VQVAEMatcha(nn.Module):
         )
 
         #! Upsample z_q to pitch time resolution
-
         if not joint_flag:
             z_diff = nn.functional.interpolate(
                 z_q.detach().permute(0,2,1),
@@ -156,7 +155,7 @@ class VQVAEMatcha(nn.Module):
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 
-        mu = self.channel_mapping(z_pos_enc)
+        mu = self.channel_mapping(z_pos_enc, mel_mask)
 
         if mu.size(1) % 2 == 1:
             mu, mel_mask, cond_enc, mel_target = self._pad_to_even(
@@ -263,7 +262,7 @@ class VQVAEMatcha(nn.Module):
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 
-        mu = self.channel_mapping(z_pos_enc)
+        mu = self.channel_mapping(z_pos_enc, mel_mask)
 
         if mu.size(1) % 2 == 1:
             pad_to_odd = True
