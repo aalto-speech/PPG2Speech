@@ -117,10 +117,9 @@ class VQVAEMatcha(nn.Module):
             embedding loss
             commitment loss
         """
-        mel_mask = ~mel_mask.unsqueeze(-1)
         _, T = pitch_target.shape
         enc_spk_emb = self.spk_enc(spk_emb).squeeze(1) # B,E -> B,E'
-        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,1 -> B,T,E_p+1
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask.unsqueeze(-1)) # B,T,1 -> B,T,E_p+1
 
         cond = torch.cat([
             repeat(enc_spk_emb, 'b e -> b t e', t=T),
@@ -129,12 +128,12 @@ class VQVAEMatcha(nn.Module):
 
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
-        cond_enc = cond_enc.masked_fill(mel_mask, 0.0)
+        cond_enc = cond_enc.masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
             cond=enc_spk_emb,
-            mask=~x_mask,
+            mask=x_mask,
         )
 
         #! Upsample z_q to pitch time resolution
@@ -142,35 +141,33 @@ class VQVAEMatcha(nn.Module):
             z_diff = nn.functional.interpolate(
                 z_q.detach().permute(0,2,1),
                 size=T,
-                mode='linear',
-                align_corners=True
-            ).transpose(-1,-2)
+                mode='nearest',
+            ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
         else:
             z_diff = nn.functional.interpolate(
                 z_q.permute(0,2,1),
                 size=T,
-                mode='linear',
-                align_corners=True
-            ).transpose(-1,-2)
+                mode='nearest',
+            ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 
-        mu = self.channel_mapping(z_pos_enc, mel_mask)
+        mu = self.channel_mapping(z_pos_enc, mel_mask.unsqueeze(-1))
 
         if mu.size(1) % 2 == 1:
             mu, mel_mask, cond_enc, mel_target = self._pad_to_even(
                 mu,
-                mel_mask,
+                mel_mask.unsqueeze(-1),
                 cond_enc,
                 mel_target
             )
-
-        mu = mu.masked_fill(mel_mask, 0.0)
+        else:
+            mel_mask = mel_mask.unsqueeze(-1)
 
         loss, _ = self.cfm.compute_loss(
             x1=mel_target.transpose(-1, -2),
             mu=mu.transpose(-1, -2),
-            mask=mel_mask.transpose(-1, -2),
+            mask=~mel_mask.transpose(-1, -2),
             spks=cond_enc.transpose(-1, -2),
         )
 
@@ -231,11 +228,10 @@ class VQVAEMatcha(nn.Module):
             embedding loss
             commitment loss
         """
-        mel_mask = ~mel_mask.unsqueeze(-1)
         pad_to_odd = False
         _, T = pitch_target.shape
         enc_spk_emb = self.spk_enc(spk_emb).squeeze(1) # B,E -> B,E'
-        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask) # B,T,1 -> B,T,E_p+1
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask.unsqueeze(-1)) # B,T,1 -> B,T,E_p+1
 
         cond = torch.cat([
             repeat(enc_spk_emb, 'b e -> b t e', t=T),
@@ -244,39 +240,38 @@ class VQVAEMatcha(nn.Module):
 
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
-        cond_enc = cond_enc.masked_fill(mel_mask, 0.0)
+        cond_enc = cond_enc.masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_q, x_rec, emb_loss, commitment = self.vqvae(
             x=x,
             cond=enc_spk_emb,
-            mask=~x_mask,
+            mask=x_mask,
         )
 
         #! Upsample z_q to pitch time resolution
         z_diff = nn.functional.interpolate(
             z_q.permute(0,2,1),
             size=T,
-            mode='linear',
-            align_corners=True
-        ).transpose(-1,-2)
+            mode='nearest',
+        ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
 
-        mu = self.channel_mapping(z_pos_enc, mel_mask)
+        mu = self.channel_mapping(z_pos_enc, mel_mask.unsqueeze(-1))
 
         if mu.size(1) % 2 == 1:
             pad_to_odd = True
             mu, mel_mask, cond_enc, _ = self._pad_to_even(
                 mu,
-                mel_mask,
+                mel_mask.unsqueeze(-1),
                 cond_enc,
             )
-
-        mu = mu.masked_fill(mel_mask, 0.0)
+        else:
+            mel_mask = mel_mask.unsqueeze(-1)
 
         pred_mel = self.cfm.forward(
             mu=mu.transpose(-1, -2),
-            mask=mel_mask.transpose(-1, -2),
+            mask=~mel_mask.transpose(-1, -2),
             n_timesteps=diff_steps,
             spks=cond_enc.transpose(-1, -2),
             temperature=temperature
