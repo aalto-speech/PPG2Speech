@@ -11,6 +11,9 @@ standardizer = StandardScaler()
 def normalize_voiced_frames(f0: np.ndarray, flags: np.ndarray) -> np.ndarray:
     voiced_frames = f0[flags == True][:, np.newaxis]
 
+    if voiced_frames.shape[0] == 0:
+        return f0
+
     normalized_frames = standardizer.fit_transform(voiced_frames)
 
     f0[flags == True] = normalized_frames.squeeze(-1)
