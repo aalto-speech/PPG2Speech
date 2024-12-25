@@ -126,6 +126,8 @@ class VQVAEMatcha(nn.Module):
             enc_pitch,
         ], dim=-1) # B,T,E'+E_p+1
 
+        # cond = repeat(enc_spk_emb, 'b e -> b t e', t=T)
+
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
         cond_enc = cond_enc.masked_fill(mel_mask.unsqueeze(-1), 0.0)
@@ -237,6 +239,8 @@ class VQVAEMatcha(nn.Module):
             repeat(enc_spk_emb, 'b e -> b t e', t=T),
             enc_pitch,
         ], dim=-1) # B,T,E'+E_p+1
+
+        # cond = repeat(enc_spk_emb, 'b e -> b t e', t=T)
 
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
