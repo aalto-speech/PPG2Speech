@@ -29,3 +29,5 @@ echo "Calculate speaker embedding distance between original target speaker wavs 
 source activate tts_env
 
 python -m ppg_tts.evaluation.cal_spk_emb_dist --data_dir ${testset} --flip_wav_dir ${exp_dir}/flip_generate_wav --device ${device}
+
+python -m srun python -m ppg_tts.evaluation.evaluate_wer --data_dir ${testset} --flip_wav_dir ${exp_dir}/flip_generate_wav
