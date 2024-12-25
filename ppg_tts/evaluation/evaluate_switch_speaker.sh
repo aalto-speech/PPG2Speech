@@ -3,10 +3,9 @@
 testset=$1
 ckpt=$2
 device=$3
-auth_token=$4
 
-if [ $# -lt 4 ]; then
-    echo "Usage: $0 <testset> <ckpt> <device> <auth_token>"
+if [ $# -lt 3 ]; then
+    echo "Usage: $0 <testset> <ckpt> <device>"
     exit 1
 fi
 
@@ -27,7 +26,7 @@ echo "Calculate speaker embedding distance between original target speaker wavs 
 python -m ppg_tts.evaluation.cal_spk_emb_dist --data_dir ${testset} --flip_wav_dir ${exp_dir}/flip_generate_wav --device ${device}
 
 echo "Evaluate WER & CER on the synthesized speech"
-python -m srun python -m ppg_tts.evaluation.evaluate_wer --data_dir ${testset} --flip_wav_dir ${exp_dir}/flip_generate_wav
+python -m ppg_tts.evaluation.evaluate_wer --data_dir ${testset} --flip_wav_dir ${exp_dir}/flip_generate_wav
 
 echo "Evaluate MOS score on the synthesized speech"
 python -m ppg_tts.evaluation.dnsmos_eval --flip_wav_dir ${exp_dir}/flip_generate_wav

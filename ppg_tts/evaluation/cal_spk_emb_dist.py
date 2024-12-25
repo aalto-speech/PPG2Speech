@@ -31,11 +31,12 @@ if __name__ == "__main__":
 
         logger.info(f"Cosine similarity between {source_key} and {target_key} is {similarity}")
 
-        shutil.copyfile(target_wav_path, f"{args.flip_wav_dir}/{source_key}_speaker_reference.wav")
+        if args.debug:
+            shutil.copyfile(target_wav_path, f"{args.flip_wav_dir}/{source_key}_speaker_reference.wav")
 
-        source_wav_path = dataset.key2wav[source_key]
+            source_wav_path = dataset.key2wav[source_key]
 
-        shutil.copyfile(source_wav_path, f"{args.flip_wav_dir}/{source_key}_context_reference.wav")
+            shutil.copyfile(source_wav_path, f"{args.flip_wav_dir}/{source_key}_context_reference.wav")
 
     avg_simi /= len(dataset)
 
