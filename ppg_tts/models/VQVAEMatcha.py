@@ -143,13 +143,13 @@ class VQVAEMatcha(nn.Module):
             z_diff = nn.functional.interpolate(
                 z_q.detach().permute(0,2,1),
                 size=T,
-                mode='nearest',
+                mode='linear',
             ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
         else:
             z_diff = nn.functional.interpolate(
                 z_q.permute(0,2,1),
                 size=T,
-                mode='nearest',
+                mode='linear',
             ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
@@ -256,7 +256,7 @@ class VQVAEMatcha(nn.Module):
         z_diff = nn.functional.interpolate(
             z_q.permute(0,2,1),
             size=T,
-            mode='nearest',
+            mode='linear',
         ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)

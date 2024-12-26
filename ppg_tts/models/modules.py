@@ -14,13 +14,6 @@ class HiddenEncoder(nn.Module):
                  ):
         super(HiddenEncoder, self).__init__()
 
-        self.smoothing = nn.Conv1d(
-            in_channels=input_channel,
-            out_channels=input_channel,
-            kernel_size=5,
-            padding=2,
-        )
-
         self.transformer_layers = nn.ModuleList()
 
         for _ in range(n_layers):
@@ -50,10 +43,6 @@ class HiddenEncoder(nn.Module):
         Returns:
             shape (B, T, E_out)
         """
-        x = rearrange(x, 'b t c -> b c t')
-        x = self.smoothing(x)
-        x = rearrange(x, 'b c t -> b t c')
-        
         for layer in self.transformer_layers:
             x = layer(x, src_key_padding_mask=mask.squeeze(-1))
 
