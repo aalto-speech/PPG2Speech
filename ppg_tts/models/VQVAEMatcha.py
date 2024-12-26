@@ -3,7 +3,7 @@ from einops import repeat
 from torch import nn
 from .matcha.flow_matching import CFM
 from .matcha.RoPE import RotaryPositionalEmbeddings
-from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder
+from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder, HiddenEncoderConformer
 from .AutoEnc import VQVAE
 from typing import List, Tuple
 
@@ -23,10 +23,12 @@ class VQVAEMatcha(nn.Module):
                  target_dim: int=80,
                  no_ctc: bool=False,
                  sigma_min: float=1e-4,
-                 transformer_type: str='conformer',
+                 transformer_type: str='transformer',
                  ae_kernel_sizes: List[int] = [3,3,1],
                  ae_dilations: List[int] = [2,4,8],
+                 hidden_trans_type: str='transformer',
                  n_trans_layers: int = 2,
+                 hidden_kernel_size: int = 5,
                  **kwargs):
         super(VQVAEMatcha, self).__init__()
 
@@ -59,11 +61,19 @@ class VQVAEMatcha(nn.Module):
             d=encode_dim
         )
 
-        self.channel_mapping = HiddenEncoder(
-            input_channel=encode_dim,
-            output_channel=target_dim,
-            n_layers=n_trans_layers,
-        )
+        if hidden_trans_type == 'conformer':
+            self.channel_mapping = HiddenEncoderConformer(
+                input_channel=encode_dim,
+                output_channel=target_dim,
+                n_layers=n_trans_layers,
+                kernel_size=hidden_kernel_size,
+            )
+        else:
+            self.channel_mapping = HiddenEncoder(
+                input_channel=encode_dim,
+                output_channel=target_dim,
+                n_layers=n_trans_layers,
+            )
 
         self.cond_channel_mapping = nn.Sequential(
             nn.Conv1d(
@@ -143,13 +153,13 @@ class VQVAEMatcha(nn.Module):
             z_diff = nn.functional.interpolate(
                 z_q.detach().permute(0,2,1),
                 size=T,
-                mode='linear',
+                mode='nearest',
             ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
         else:
             z_diff = nn.functional.interpolate(
                 z_q.permute(0,2,1),
                 size=T,
-                mode='linear',
+                mode='nearest',
             ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)
@@ -256,7 +266,7 @@ class VQVAEMatcha(nn.Module):
         z_diff = nn.functional.interpolate(
             z_q.permute(0,2,1),
             size=T,
-            mode='linear',
+            mode='nearest',
         ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         z_pos_enc = self.rope(z_diff.unsqueeze(1)).squeeze(1)

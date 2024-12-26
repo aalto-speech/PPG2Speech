@@ -2,5 +2,5 @@ data:
   class_path: ppg_tts.tts.DataModule.BasicDataModule
   init_args:
     data_dir: /scratch/elec/t412-speechsynth/DATA/fin-mix
-    batch_size: 16
+    batch_size: 32
     no_ctc: true

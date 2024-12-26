@@ -1,7 +1,30 @@
 import torch
 import unittest
 from ppg_tts.models.modules import \
-    VariancePredictor, SpeakerEmbeddingEncoder, VarianceAdaptor, PitchEncoder, HiddenEncoder
+    VariancePredictor, SpeakerEmbeddingEncoder,\
+    VarianceAdaptor, PitchEncoder, HiddenEncoder, HiddenEncoderConformer
+
+class TestHiddenEncoderConformer(unittest.TestCase):
+    def setUp(self):
+        self.module = HiddenEncoderConformer(
+            input_channel=12,
+            output_channel=6,
+            n_layers=1,
+            kernel_size=3
+        )
+
+        self.x = torch.randn((4, 5, 12))
+        self.mask = torch.tensor([
+            [False, False, False, True, True],
+            [False, False, False, False, True],
+            [False, False, False, False, True],
+            [False, False, False, False, False],
+        ]).unsqueeze(-1)
+
+    def testForward(self):
+        out = self.module(self.x, self.mask)
+
+        self.assertTupleEqual(out.shape, (4, 5, 6))
 
 class TestHiddenEncoder(unittest.TestCase):
     def setUp(self):

@@ -2,8 +2,59 @@ import torch
 import numpy as np
 from einops import rearrange
 from torch import nn
+from torchaudio.models.conformer import ConformerLayer
 from collections import OrderedDict
 from .AutoEnc.AutoEnc import ResidualConvLayer
+
+class HiddenEncoderConformer(nn.Module):
+    def __init__(self,
+                 input_channel: int,
+                 output_channel: int,
+                 n_layers: int,
+                 kernel_size: int,
+                 ):
+        super(HiddenEncoderConformer, self).__init__()
+
+        self.conformer_layers = nn.ModuleList()
+
+        for _ in range(n_layers):
+            self.conformer_layers.append(
+                ConformerLayer(
+                    input_dim=input_channel,
+                    ffn_dim=4*input_channel,
+                    num_attention_heads=4,
+                    depthwise_conv_kernel_size=kernel_size,
+                    dropout=0.1,
+                )
+            )
+
+        self.output = nn.Conv1d(
+            in_channels=input_channel,
+            out_channels=output_channel,
+            kernel_size=1
+        )
+
+    def forward(self,
+                x: torch.Tensor,
+                mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: shape (B, T, E)
+            mask: shape (B, T, 1)
+        Returns:
+            shape (B, T, E_out)
+        """
+        x = rearrange(x, 'b t c -> t b c')
+        for layer in self.conformer_layers:
+            x = layer(x, key_padding_mask=mask.squeeze(-1))
+
+        x_reshape = rearrange(x, 't b c -> b c t')
+
+        out = self.output(x_reshape)
+
+        out = rearrange(out, 'b c t -> b t c')
+
+        return out.masked_fill(mask, 0.0)
 
 class HiddenEncoder(nn.Module):
     def __init__(self,

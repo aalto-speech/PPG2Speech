@@ -56,7 +56,10 @@ if __name__ == "__main__":
     )
 
     exp_dir = Path(args.ckpt).parent.parent
-    mel_save_dir = exp_dir / "flip_generate_mel"
+    if args.switch_speaker:
+        mel_save_dir = exp_dir / "flip_generate_mel"
+    else:
+        mel_save_dir = exp_dir / "mel"
 
     os.makedirs(mel_save_dir, exist_ok=True)
 
@@ -67,17 +70,20 @@ if __name__ == "__main__":
     for i, testdata in enumerate(testloader):
         # Inference mel spectrogram
         source_key = testdata['keys'][0]
-        target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
+        if args.switch_speaker:
+            target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
+            
+            # Pitch shift in inference
+            curr_speaker = source_key.split('_')[0]
+            target_speaker = target_key.split('_')[0]
+            curr_median = speaker_median[curr_speaker]
+            target_median = speaker_median[target_speaker]
+            shifted_pitch = testdata['log_F0'] * target_median / curr_median
+        else:
+            target_key, target_spk_emb = source_key, testdata['spk_emb'].squeeze(0)
+            shifted_pitch = testdata['log_F0']
         logger.info(f"generate {source_key} with speaker embedding from {target_key}")
         print(f"{source_key} {target_key}", file=speaker_mapping)
-
-        # Pitch shift in inference
-        curr_speaker = source_key.split('_')[0]
-        target_speaker = target_key.split('_')[0]
-        curr_median = speaker_median[curr_speaker]
-        target_median = speaker_median[target_speaker]
-
-        shifted_pitch = testdata['log_F0'] * target_median / curr_median
 
         pred_mel, _, _, _ = model.synthesis(
             x=testdata['ppg'],

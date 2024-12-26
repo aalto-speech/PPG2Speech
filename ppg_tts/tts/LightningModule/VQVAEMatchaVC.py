@@ -34,7 +34,9 @@ class VQVAEMatchaVC(L.LightningModule):
                  first_stage_steps: int = 10000,
                  second_stage_steps: int = 100000,
                  lr_scheduler_interval: int = 1500,
-                 n_trans_layers: int=2,
+                 hidden_trans_type: str='transformer',
+                 n_trans_layers: int = 2,
+                 hidden_kernel_size: int = 5,
                  **kwargs):
         super().__init__()
 
@@ -74,7 +76,9 @@ class VQVAEMatchaVC(L.LightningModule):
             pitch_emb_size=pitch_emb_size,
             ae_kernel_sizes=ae_kernel_sizes,
             ae_dilations=ae_dilations,
+            hidden_trans_type=hidden_trans_type,
             n_trans_layers=n_trans_layers,
+            hidden_kernel_size=hidden_kernel_size,
         )
 
         self.first_stage_params = list(self.model.vqvae.parameters()) + \
@@ -222,7 +226,8 @@ class VQVAEMatchaVC(L.LightningModule):
             v_flag=batch['v_flag'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
-            temperature=self.temperature
+            temperature=self.temperature,
+            x_mask=batch['ppg_mask'],
         )
 
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
