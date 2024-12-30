@@ -6,6 +6,15 @@ from torchmetrics.functional.audio.dnsmos \
 from loguru import logger
 from ..utils import build_parser
 
+def read_wav_scp(scp: str):
+    with open(scp, "r") as reader:
+        lines = reader.readlines()
+
+    d = {line.strip(' \n').split()[0]: line.strip(' \n').split()[1] for line in lines}
+
+    for k, v in d.items():
+        x, sr = torchaudio.load(v)
+        yield x, sr, k
 
 def read_wav(wav_dir: str):
     wavs = os.listdir(wav_dir)
@@ -25,6 +34,7 @@ if __name__ == "__main__":
     average_score = torch.zeros((4,))
     num_audio  = 0
 
+    # for wav, sr, key in read_wav_scp('/scratch/work/liz32/ppg_tts/data/spk_sanity/wav.scp'):
     for wav, sr, key in read_wav(args.flip_wav_dir):
         score = deep_noise_suppression_mean_opinion_score(
             preds=wav,
