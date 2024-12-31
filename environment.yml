@@ -187,6 +187,7 @@ dependencies:
       - alembic==1.13.3
       - annotated-types==0.7.0
       - antlr4-python3-runtime==4.9.3
+      - apprise==1.9.1
       - asteroid-filterbanks==0.4.0
       - audioread==3.0.1
       - auraloss==0.4.0
@@ -263,12 +264,14 @@ dependencies:
       - nvidia-nccl-cu12==2.20.5
       - nvidia-nvjitlink-cu12==12.1.105
       - nvidia-nvtx-cu12==12.1.105
+      - oauthlib==3.2.2
       - omegaconf==2.3.0
       - onnx==1.17.0
       - onnxruntime==1.20.1
       - onnxruntime-gpu==1.20.1
       - optuna==4.0.0
       - pathspec==0.12.1
+      - penn==0.0.14
       - pesq==0.0.4
       - platformdirs==4.3.6
       - plotly==5.24.1
@@ -298,6 +301,7 @@ dependencies:
       - pytorch-lightning==2.4.0
       - pytorch-metric-learning==2.6.0
       - rdkit==2024.3.6
+      - requests-oauthlib==2.0.0
       - rich==13.9.3
       - ruamel-yaml==0.18.6
       - ruamel-yaml-clib==0.2.12
@@ -326,6 +330,7 @@ dependencies:
       - torch-pitch-shift==1.2.5
       - torchaudio==2.3.1+cu121
       - torchmetrics==1.5.1
+      - torchutil==0.0.14
       - torchvision==0.18.1+cu121
       - tornado==6.4.2
       - triton==2.3.1
@@ -338,4 +343,5 @@ dependencies:
       - wespeaker==0.0.0
       - xyzservices==2024.9.0
       - yamllint==1.35.1
+      - yapecs==0.0.8
 prefix: /scratch/work/liz32/.conda_envs/tts_env

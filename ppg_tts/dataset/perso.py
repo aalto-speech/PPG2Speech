@@ -133,20 +133,6 @@ class PersoDatasetWithConditions(PersoDatasetBasic):
                 key2feat[key] = array
         
         return key2feat
-    
-    def _interpolate(self,
-                     x: torch.Tensor,
-                     target_length: int) -> torch.Tensor:
-        x = x.unsqueeze(0).permute(0, 2, 1)
-
-        x_interpolated = interpolate(x, 
-                                     size=target_length, 
-                                     mode='linear', 
-                                     align_corners=True)
-
-        x_interpolated = x_interpolated.permute(0, 2, 1).squeeze(0)
-
-        return x_interpolated
 
 
 def PersoCollateFn(batch_lst: List[Dict]) -> Dict[str, torch.Tensor]:
