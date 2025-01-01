@@ -1,7 +1,141 @@
 import torch
 import numpy as np
+from einops import rearrange
 from torch import nn
+from torchaudio.models.conformer import ConformerLayer
 from collections import OrderedDict
+from .AutoEnc.AutoEnc import ResidualConvLayer
+
+class HiddenEncoderConformer(nn.Module):
+    def __init__(self,
+                 input_channel: int,
+                 output_channel: int,
+                 n_layers: int,
+                 kernel_size: int,
+                 ):
+        super(HiddenEncoderConformer, self).__init__()
+
+        self.conformer_layers = nn.ModuleList()
+
+        for _ in range(n_layers):
+            self.conformer_layers.append(
+                ConformerLayer(
+                    input_dim=input_channel,
+                    ffn_dim=4*input_channel,
+                    num_attention_heads=4,
+                    depthwise_conv_kernel_size=kernel_size,
+                    dropout=0.1,
+                )
+            )
+
+        self.output = nn.Conv1d(
+            in_channels=input_channel,
+            out_channels=output_channel,
+            kernel_size=1
+        )
+
+    def forward(self,
+                x: torch.Tensor,
+                mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: shape (B, T, E)
+            mask: shape (B, T, 1)
+        Returns:
+            shape (B, T, E_out)
+        """
+        x = rearrange(x, 'b t c -> t b c')
+        for layer in self.conformer_layers:
+            x = layer(x, key_padding_mask=mask.squeeze(-1))
+
+        x_reshape = rearrange(x, 't b c -> b c t')
+
+        out = self.output(x_reshape)
+
+        out = rearrange(out, 'b c t -> b t c')
+
+        return out.masked_fill(mask, 0.0)
+
+class HiddenEncoder(nn.Module):
+    def __init__(self,
+                 input_channel: int,
+                 output_channel: int,
+                 n_layers: int,
+                 activation: str='gelu',
+                 ):
+        super(HiddenEncoder, self).__init__()
+
+        self.transformer_layers = nn.ModuleList()
+
+        for _ in range(n_layers):
+            self.transformer_layers.append(
+                nn.TransformerEncoderLayer(
+                    d_model=input_channel,
+                    nhead=4,
+                    dim_feedforward=4 * input_channel,
+                    batch_first=True,
+                    activation=activation,
+                )
+            )
+
+        self.output = nn.Conv1d(
+            in_channels=input_channel,
+            out_channels=output_channel,
+            kernel_size=1
+        )
+
+    def forward(self,
+                x: torch.Tensor,
+                mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: shape (B, T, E)
+            mask: shape (B, T, 1)
+        Returns:
+            shape (B, T, E_out)
+        """
+        for layer in self.transformer_layers:
+            x = layer(x, src_key_padding_mask=mask.squeeze(-1))
+
+        x_reshape = rearrange(x, 'b t c -> b c t')
+
+        out = self.output(x_reshape)
+
+        out = rearrange(out, 'b c t -> b t c')
+
+        return out.masked_fill(mask, 0.0)
+
+class PitchEncoder(nn.Module):
+    def __init__(self,
+                 emb_size: int,
+                 pitch_min: float,
+                 pitch_max: float,
+                 n_bins: int=256):
+        super().__init__()
+
+        self.pitch_bins = nn.Parameter(
+            torch.linspace(pitch_min, pitch_max, n_bins - 1),
+            requires_grad=False,
+        )
+
+        self.pitch_embedding = nn.Embedding(n_bins, emb_size)
+
+    def forward(self,
+                pitch: torch.Tensor,
+                v_flag: torch.Tensor,
+                pitch_mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            pitch: input pitch of shape (B, T)
+            v_flag: the voiced flag of shape (B, T)
+            pitch_mask: bool tensor of shape (B, T)
+        Return:
+            pitch_enc: tensor of shape (B, T, E+1)
+        """
+        embedding = self.pitch_embedding(torch.bucketize(pitch.unsqueeze(-1), self.pitch_bins))
+        out = torch.cat([embedding.squeeze(-2), v_flag.unsqueeze(-1)], dim=-1)
+
+        return out.masked_fill(pitch_mask, 0.0)
 
 class VarianceAdaptor(nn.Module):
     """
@@ -101,22 +235,30 @@ class SpeakerEmbeddingEncoder(nn.Module):
     """
     def __init__(self,
                  input_size: int,
-                 model_size: int,
-                 output_size: int,
-                 dropout: float=0.5):
+                 output_size: int,):
         super(SpeakerEmbeddingEncoder, self).__init__()
 
         self.input_size = input_size
-        self.model_size = model_size
         self.output_size = output_size
-        self.dropout = dropout
 
         self.encoder = nn.Sequential(
-            nn.Linear(in_features=input_size, out_features=model_size, bias=True),
-            nn.LayerNorm(model_size),
+            nn.Conv1d(
+                in_channels=input_size,
+                out_channels=output_size,
+                kernel_size=1,
+            ),
             nn.ReLU(),
-            nn.Dropout(self.dropout),
-            nn.Linear(in_features=model_size, out_features=output_size, bias=True)
+            ResidualConvLayer(
+                channels=output_size,
+                kernel_size=1,
+                dilation=1
+            ),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels=output_size,
+                out_channels=output_size,
+                kernel_size=1,
+            ),
         )
 
     def forward(self, spk_embs: torch.Tensor) -> torch.Tensor:
@@ -124,9 +266,9 @@ class SpeakerEmbeddingEncoder(nn.Module):
         Arguments:
             spk_embs: tensor with shape (B, E)
         Returns:
-            tensor with shape (B, E_out)
+            tensor with shape (B, 1, E_out)
         """
-        return self.encoder(spk_embs)
+        return self.encoder(spk_embs.unsqueeze(-1)).transpose(-1, -2)
     
 class Conv(nn.Module):
     """

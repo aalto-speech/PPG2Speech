@@ -4,8 +4,24 @@ from loguru import logger
 from librosa import pyin
 from typing import Dict, Tuple
 from scipy.interpolate import interp1d
+from sklearn.preprocessing import StandardScaler
 
-def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndarray]:
+standardizer = StandardScaler()
+
+def normalize_voiced_frames(f0: np.ndarray, flags: np.ndarray) -> np.ndarray:
+    voiced_frames = f0[flags == True][:, np.newaxis]
+
+    if voiced_frames.shape[0] == 0:
+        return f0
+
+    normalized_frames = standardizer.fit_transform(voiced_frames)
+
+    f0[flags == True] = normalized_frames.squeeze(-1)
+
+    return f0
+
+def extract_f0_from_utterance(utterance: Dict, normalize: bool=False) \
+    -> Tuple[str, np.ndarray, np.ndarray]:
     wav = utterance["feature"]
     if not isinstance(wav, np.ndarray):
         wav = wav.numpy()
@@ -15,6 +31,9 @@ def extract_f0_from_utterance(utterance: Dict) -> Tuple[str, np.ndarray, np.ndar
                                              sr=22050,
                                              hop_length=256,
                                              frame_length=1024)
+
+    if normalize:
+        foundamental_freq = normalize_voiced_frames(foundamental_freq, voiced_flag)
                 
     foundamental_freq = convert_continuos_f0(utterance["key"], foundamental_freq.squeeze())
     foundamental_freq = np.log(foundamental_freq,

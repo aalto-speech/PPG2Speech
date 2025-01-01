@@ -16,6 +16,8 @@ if __name__ == "__main__":
 
     all_pitch_per_speaker = defaultdict(list)
 
+    voiced_flag = False
+
     log_F0_min, log_F0_max, energy_min, energy_max = np.inf, -np.inf, np.inf, -np.inf
 
     for data in dataset:
@@ -24,11 +26,15 @@ if __name__ == "__main__":
         speaker = key.split('_')[0]
 
         pitch = data['log_F0']
-        uv = data['v_flag']
 
-        orig_pitch = pitch * uv
+        if voiced_flag:
+            uv = data['v_flag']
 
-        orig_pitch = orig_pitch[orig_pitch > 0].tolist()
+            orig_pitch = pitch * uv
+
+            orig_pitch = orig_pitch[orig_pitch > 0].tolist()
+        else:
+            orig_pitch = pitch.tolist()
 
         all_pitch_per_speaker[speaker].extend(orig_pitch)
 

@@ -25,4 +25,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="ckpt path for the TTS/VC model.")
     parser.add_argument("--flip_wav_dir",
                         help="the wav directory for flipped generation")
+    parser.add_argument('--debug',
+                        help='whether or not using debug mode.',
+                        action="store_true")
+    parser.add_argument('--switch_speaker',
+                        help='whether to switch the speaker embedding during inference',
+                        action='store_true')
     return parser

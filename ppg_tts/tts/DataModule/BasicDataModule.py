@@ -13,6 +13,7 @@ class BasicDataModule(L.LightningDataModule):
         self.train_dir = Path(data_dir) / "train"
         self.val_dir = Path(data_dir) / "val"
         self.test_dir = Path(data_dir) / "test"
+        self.pred_dir = "data/spk_sanity"
         self.batch_size = batch_size
         self.no_ctc = no_ctc
 
@@ -23,14 +24,17 @@ class BasicDataModule(L.LightningDataModule):
         if stage == 'fit':
             self.train = ExtendDataset(data_dir=self.train_dir, no_ctc=self.no_ctc)
             self.val = ExtendDataset(data_dir=self.val_dir, no_ctc=self.no_ctc)
-        elif stage == 'test' or stage == 'predict':
+        elif stage == 'test':
             self.test = ExtendDataset(data_dir=self.test_dir, no_ctc=self.no_ctc)
+        elif stage == 'predict':
+            self.predict = ExtendDataset(data_dir=self.pred_dir, no_ctc=self.no_ctc)
 
     def train_dataloader(self):
         return DataLoader(self.train,
                           batch_size=self.batch_size,
                           num_workers=8,
-                          collate_fn=PersoCollateFn)
+                          collate_fn=PersoCollateFn,
+                          shuffle=True)
     
     def val_dataloader(self):
         return DataLoader(self.val,
@@ -45,7 +49,7 @@ class BasicDataModule(L.LightningDataModule):
                           collate_fn=PersoCollateFn)
     
     def predict_dataloader(self):
-        return DataLoader(self.test,
+        return DataLoader(self.predict,
                           batch_size=1,
                           num_workers=4,
                           collate_fn=PersoCollateFn)

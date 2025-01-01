@@ -1,6 +1,73 @@
 import torch
 import unittest
-from ppg_tts.models.modules import VariancePredictor, SpeakerEmbeddingEncoder, VarianceAdaptor
+from ppg_tts.models.modules import \
+    VariancePredictor, SpeakerEmbeddingEncoder,\
+    VarianceAdaptor, PitchEncoder, HiddenEncoder, HiddenEncoderConformer
+
+class TestHiddenEncoderConformer(unittest.TestCase):
+    def setUp(self):
+        self.module = HiddenEncoderConformer(
+            input_channel=12,
+            output_channel=6,
+            n_layers=1,
+            kernel_size=3
+        )
+
+        self.x = torch.randn((4, 5, 12))
+        self.mask = torch.tensor([
+            [False, False, False, True, True],
+            [False, False, False, False, True],
+            [False, False, False, False, True],
+            [False, False, False, False, False],
+        ]).unsqueeze(-1)
+
+    def testForward(self):
+        out = self.module(self.x, self.mask)
+
+        self.assertTupleEqual(out.shape, (4, 5, 6))
+
+class TestHiddenEncoder(unittest.TestCase):
+    def setUp(self):
+        self.module = HiddenEncoder(
+            input_channel=12,
+            output_channel=6,
+            n_layers=1,
+        )
+
+        self.x = torch.randn((4, 5, 12))
+        self.mask = torch.tensor([
+            [False, False, False, True, True],
+            [False, False, False, False, True],
+            [False, False, False, False, True],
+            [False, False, False, False, False],
+        ]).unsqueeze(-1)
+
+    def testForward(self):
+        out = self.module(self.x, self.mask)
+
+        self.assertTupleEqual(out.shape, (4, 5, 6))
+
+class TestPitchEncoder(unittest.TestCase):
+    def setUp(self):
+        self.module = PitchEncoder(8, -10, 10)
+
+        self.pitch = torch.randn((2,3,1))
+        self.v_flag = torch.randn((2,3,1))
+
+        self.mask = torch.tensor([
+            [False, True, True],
+            [False, False, True]
+        ],
+        dtype=torch.bool).unsqueeze(-1)
+
+    def testForward(self):
+        enc_pitch = self.module.forward(
+            self.pitch,
+            self.v_flag,
+            self.mask
+        )
+
+        self.assertTupleEqual(enc_pitch.shape, (2,3,9))
 
 class TestVariancePredictor(unittest.TestCase):
     def setUp(self):
@@ -18,15 +85,14 @@ class TestVariancePredictor(unittest.TestCase):
 
 class TestSpeakerEmbeddingEncoder(unittest.TestCase):
     def setUp(self):
-        self.x = torch.randn((4,512))
+        self.x = torch.randn((4,32))
 
-        self.module = SpeakerEmbeddingEncoder(input_size=512,
-                                              model_size=2048,
-                                              output_size=256)
+        self.module = SpeakerEmbeddingEncoder(input_size=32,
+                                              output_size=4)
 
     def testForward(self):
         y = self.module(self.x)
-        self.assertTupleEqual(y.shape, (4,256))
+        self.assertTupleEqual(y.shape, (4,1,4))
 
 class TestVarianceAdapter(unittest.TestCase):
     def setUp(self):
@@ -67,3 +133,5 @@ if __name__ == "__main__":
     TestVariancePredictor.run()
     TestSpeakerEmbeddingEncoder.run()
     TestVarianceAdapter.run()
+    TestPitchEncoder.run()
+    TestHiddenEncoder.run()

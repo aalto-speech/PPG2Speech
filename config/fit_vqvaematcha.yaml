@@ -58,15 +58,19 @@ trainer:
   reload_dataloaders_every_n_epochs: 0
   default_root_dir: null
 model:
-  class_path: ppg_tts.tts.LightningModule.ConformerMatchaTTSModel
+  class_path: ppg_tts.tts.LightningModule.VQVAEMatchaVC
   init_args:
     pitch_stats: /scratch/elec/t412-speechsynth/DATA/fin-mix/train/stats.json
     ppg_dim: 34
-    encode_dim: 64
-    spk_emb_size: 512
+    ppg_variance: 0.4897841937287568
+    num_emb: 32
+    encode_dim: 128
+    spk_emb_size: 256
+    spk_emb_enc_dim: 128
     pitch_emb_size: 16
     dropout: 0.1
     target_dim: 80
+    decoder_num_mid_block: 3
     sigma_min: 1e-4
     lr: 1e-4
     gamma: 0.99
@@ -76,7 +80,12 @@ model:
     temperature: 0.667
     ae_kernel_sizes: [3,3,1]
     ae_dilations: [2,4,8]
-    first_stage_steps: 100000
+    first_stage_steps: 4000
+    second_stage_steps: 3000
+    lr_scheduler_interval: 1500
+    n_trans_layers: 4
+    hidden_trans_type: 'transformer'
+    hidden_kernel_size: 5
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

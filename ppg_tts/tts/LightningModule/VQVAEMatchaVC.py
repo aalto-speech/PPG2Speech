@@ -3,32 +3,40 @@ import os
 import json
 import lightning as L
 import torch
+import wandb
 from typing import List
-from ...models import ConformerMatchaTTS
-from torch.optim import lr_scheduler as LRScheduler
-from ...utils import plot_mel
+from ...models import VQVAEMatcha
+from ...utils import plot_mel, plot_tensor_wandb
 
-class ConformerMatchaTTSModel(L.LightningModule):
+class VQVAEMatchaVC(L.LightningModule):
     def __init__(self,
                  pitch_stats: str,
                  ppg_dim: int,
+                 ppg_variance: float,
                  encode_dim: int,
                  pitch_emb_size: int,
                  spk_emb_size: int,
+                 spk_emb_enc_dim: int,
+                 num_emb: int,
                  decoder_num_block: int=1,
                  decoder_num_mid_block: int=2,
                  dropout: float=0.1,
                  target_dim: int=80,
                  sigma_min: float=1e-4,
-                 transformer_type: str='conformer',
+                 transformer_type: str='transformer',
                  lr: float=1e-4,
                  gamma: float=0.98,
                  no_ctc: bool=False,
-                 diff_steps: int=300,
+                 diff_steps: int=10,
                  temperature: float=0.667,
                  ae_kernel_sizes: List[int] = [3,3,1],
                  ae_dilations: List[int] = [2,4,8],
-                 first_stage_steps: int = 100000,
+                 first_stage_steps: int = 10000,
+                 second_stage_steps: int = 100000,
+                 lr_scheduler_interval: int = 1500,
+                 hidden_trans_type: str='transformer',
+                 n_trans_layers: int = 2,
+                 hidden_kernel_size: int = 5,
                  **kwargs):
         super().__init__()
 
@@ -44,15 +52,20 @@ class ConformerMatchaTTSModel(L.LightningModule):
         self.temperature = temperature
         self.pitch_min = self.pitch_stats['pitch_min']
         self.pitch_max = self.pitch_stats['pitch_max']
+        self.ppg_variance = ppg_variance
+        self.lr_scheduler_interval = lr_scheduler_interval
 
         self.first_stage_steps = first_stage_steps
+        self.second_stage_steps = second_stage_steps
 
-        self.model = ConformerMatchaTTS(
+        self.model = VQVAEMatcha(
             ppg_dim=ppg_dim,
             encode_dim=encode_dim,
             spk_emb_size=spk_emb_size,
+            spk_emb_enc_dim=spk_emb_enc_dim,
             dropout=dropout,
             target_dim=target_dim,
+            num_emb=num_emb,
             no_ctc=no_ctc,
             sigma_min=sigma_min,
             transformer_type=transformer_type,
@@ -62,101 +75,132 @@ class ConformerMatchaTTSModel(L.LightningModule):
             pitch_max=self.pitch_max,
             pitch_emb_size=pitch_emb_size,
             ae_kernel_sizes=ae_kernel_sizes,
-            ae_dilations=ae_dilations
+            ae_dilations=ae_dilations,
+            hidden_trans_type=hidden_trans_type,
+            n_trans_layers=n_trans_layers,
+            hidden_kernel_size=hidden_kernel_size,
         )
 
-        self.first_stage_params = [
-            self.model.AE.parameters(),
-            self.model.spk_enc.parameters()
-        ]
+        self.first_stage_params = list(self.model.vqvae.parameters()) + \
+            list(self.model.spk_enc.parameters())
 
-        self.second_stage_params = [
-            self.model.cfm.parameters(),
-            self.model.pitch_encoder.parameters(),
-            self.model.rope.parameters(),
-            self.model.channel_mapping.parameters(),
-            self.model.cond_channel_mapping.parameters()
-        ]
+        self.second_stage_params = list(self.model.cfm.parameters()) + \
+            list(self.model.pitch_encoder.parameters()) + \
+            list(self.model.rope.parameters()) + \
+            list(self.model.channel_mapping.parameters()) + \
+            list(self.model.cond_channel_mapping.parameters())
 
         self.automatic_optimization = False
 
-        self.ae_loss = torch.nn.L1Loss()
+        self.ae_loss = torch.nn.MSELoss()
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
-        loss, x_rec = self.model.forward(
+        joint_flag = self.global_step >= (self.first_stage_steps + self.second_stage_steps)
+        loss, x_rec, emb_loss, commitment_loss = self.model.forward(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
             mel_target=batch['mel'],
-            mel_mask=batch['mel_mask']
+            mel_mask=batch['mel_mask'],
+            joint_flag=joint_flag,
+            x_mask=batch['ppg_mask'],
         )
 
-        ae_loss = self.ae_loss(batch['ppg'], x_rec)
+        ae_loss = self.ae_loss(batch['ppg'], x_rec) / self.ppg_variance
 
-        stage1_opt, stage2_opt = self.optimizers()
+        self.log_dict({
+            "train/ae_reconstruct_loss": ae_loss,
+            "train/diffusion_loss": loss,
+            "train/embedding_loss": emb_loss,
+            "train/commitment_loss": commitment_loss,
+        })
 
-        if self.global_step < self.first_stage_steps: # In stage 1, train autoencoder
-            self.log_dict({
-                "train/ae_reconstruct_loss": ae_loss,
-            })
+        stage1_opt, stage2_opt, stage3_opt = self.optimizers()
+
+        if self.global_step < self.first_stage_steps: # In stage 1, train vqvae
             stage1_opt.optimizer.zero_grad()
-            self.manual_backward(ae_loss)
+            total_loss = ae_loss + emb_loss + commitment_loss
+            self.manual_backward(total_loss)
             stage1_opt.step()
 
-            if self.trainer.is_last_batch:
-                sch1, _ = self.lr_schedulers()
+            if self.global_step % self.lr_scheduler_interval == 0:
+                sch1, _, _ = self.lr_schedulers()
                 sch1.step()
 
-            return ae_loss
-
-        else: # In stage 2, train diffuser
-            self.log_dict({
-                "train/diffusion_loss": loss,
-            })
+            return total_loss
+        # In stage 2, train diffuser
+        elif self.first_stage_steps <= self.global_step < self.first_stage_steps + self.second_stage_steps:
             stage2_opt.optimizer.zero_grad()
             self.manual_backward(loss=loss)
             stage2_opt.step()
 
-            if self.trainer.is_last_batch:
-                _, sch2 = self.lr_schedulers()
-                sch2.step()       
-        
+            if self.global_step % self.lr_scheduler_interval == 0:
+                _, sch2, _ = self.lr_schedulers()
+                sch2.step()
+            
             return loss
+        else:
+            stage3_opt.optimizer.zero_grad()
+            total_loss = ae_loss + loss + emb_loss + commitment_loss
+            self.manual_backward(total_loss)
+            stage3_opt.step()
 
+            if self.global_step % self.lr_scheduler_interval == 0:
+                _, _, sch3 = self.lr_schedulers()
+                sch3.step()
+            
+            return total_loss
+        
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         
-        pred_mel, x_rec = self.model.synthesis(
+        pred_mel, x_rec, emb_loss, commitment_loss = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
-            temperature=self.temperature
+            temperature=self.temperature,
+            x_mask=batch['ppg_mask'],
         )
 
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
 
-        ae_loss = self.ae_loss(batch['ppg'], x_rec)
+        ae_loss = self.ae_loss(batch['ppg'], x_rec) / self.ppg_variance
 
         self.log_dict({
             "val/mel_loss": mel_loss,
             "val/ae_reconstruct_loss": ae_loss,
+            "val/embedding_loss": emb_loss,
+            "val/commitment_loss": commitment_loss,
         })
+
+        if batch_idx == 0:
+            for sample_id in range(2):
+                mel = pred_mel[sample_id]
+
+                mel = mel[:batch['energy_len'][sample_id], :] # (T, 80)
+
+                # log mel to wandb
+                self.logger.experiment.log({
+                    f"generate_mel/{sample_id}": wandb.Image(plot_tensor_wandb(mel.transpose(-1, -2).squeeze().cpu()),
+                                                             caption=f"generated mel in Epoch {self.current_epoch}")
+                })
         
-        return mel_loss + ae_loss
+        return mel_loss + ae_loss + emb_loss + commitment_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         
-        pred_mel, _ = self.model.synthesis(
+        pred_mel, _, _, _ = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
-            temperature=self.temperature
+            temperature=self.temperature,
+            x_mask=batch['ppg_mask'],
         )
 
         mel_loss = torch.nn.functional.l1_loss(pred_mel, batch['mel'])
@@ -175,14 +219,15 @@ class ConformerMatchaTTSModel(L.LightningModule):
         return mel_loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        pred_mel, _ = self.model.synthesis(
+        pred_mel, _, _, _ = self.model.synthesis(
             x=batch['ppg'],
             spk_emb=batch['spk_emb'],
             pitch_target=batch['log_F0'],
             v_flag=batch['v_flag'],
             mel_mask=batch['mel_mask'],
             diff_steps=self.diffusion_steps,
-            temperature=self.temperature
+            temperature=self.temperature,
+            x_mask=batch['ppg_mask'],
         )
 
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
@@ -206,6 +251,11 @@ class ConformerMatchaTTSModel(L.LightningModule):
             self.second_stage_params,
             lr=self.lr
         )
+
+        stage3_optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=self.lr
+        )
         
         stage1_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=stage1_optimizer,
@@ -216,7 +266,13 @@ class ConformerMatchaTTSModel(L.LightningModule):
             optimizer=stage2_optimizer,
             gamma=self.gamma
         )
-        return [stage1_optimizer, stage2_optimizer], [stage1_lr_scheduler, stage2_lr_scheduler]
+
+        stage3_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=stage3_optimizer,
+            gamma=self.gamma
+        )
+        return [stage1_optimizer, stage2_optimizer, stage3_optimizer],\
+            [stage1_lr_scheduler, stage2_lr_scheduler, stage3_lr_scheduler]
     
     def on_fit_end(self):
         self.trainer.test(ckpt_path='best',
