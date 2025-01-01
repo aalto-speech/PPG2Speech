@@ -12,13 +12,13 @@ fi
 
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 
-# echo "Generating mels with flipped speaker identity"
+echo "Generating mels with flipped speaker identity"
 
-# python -m ppg_tts.evaluation.synthesis --ckpt ${ckpt} --device ${device} --data_dir ${testset}
+python -m ppg_tts.evaluation.synthesis --ckpt ${ckpt} --device ${device} --data_dir ${testset}
 
 echo "Generating wavs for flipped generated mels"
 
-if [[ $vocoder -eq "bigvgan" ]]; then
+if [[ $vocoder == "bigvgan" ]]; then
 
     curr_dir=$(pwd)
 

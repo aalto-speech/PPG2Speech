@@ -51,17 +51,11 @@ def inference(a):
             x = torch.FloatTensor(x).to(device)
             y_g_hat = generator(x)
             audio = y_g_hat.squeeze()
-            # audio = audio * MAX_WAV_VALUE
-            # audio = audio.cpu().numpy().astype('int16')
-            audio = audio.cpu().numpy()
-
-            wav_peak = np.abs(audio).max()
-
-            audio = audio / wav_peak * 0.9
+            audio = audio * MAX_WAV_VALUE
+            audio = audio.cpu().numpy().astype('int16')
 
             output_file = os.path.join(a.output_dir, os.path.splitext(filname)[0] + '_generated_e2e.wav')
-            # write(output_file, h.sampling_rate, audio)
-            soundfile.write(output_file, audio, h.sampling_rate)
+            write(output_file, h.sampling_rate, audio)
             print(output_file, flush=True)
 
 

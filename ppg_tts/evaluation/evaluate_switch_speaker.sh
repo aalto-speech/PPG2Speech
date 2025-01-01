@@ -18,7 +18,7 @@ python -m ppg_tts.evaluation.synthesis --ckpt ${ckpt} --device ${device} --data_
 
 echo "Generating wavs for flipped generated mels"
 
-if [[ $vocoder -eq "bigvgan" ]]; then
+if [[ $vocoder == "bigvgan" ]]; then
 
     curr_dir=$(pwd)
 
