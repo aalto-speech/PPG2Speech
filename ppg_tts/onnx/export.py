@@ -89,7 +89,7 @@ def main():
     )
 
     parser.add_argument(
-        '--output_dir',
+        '--output',
         type=str,
         help='output directory of the onnx model'
     )
@@ -113,20 +113,20 @@ def main():
     dummy_input, input_names = get_inputs()
 
     dynamic_axes = {
-        'w2v2_hid': {0: 'batch_size', 1: 'time'},
-        'w2v2_hid_mask': {0: 'batch_size', 1: 'time'},
+        'w2v2_hid': {0: 'batch_size', 1: 'w2v2_length'},
+        'w2v2_hid_mask': {0: 'batch_size', 1: 'w2v2_length'},
         'spk_emb': {0: 'batch_size'},
-        'f0': {0: 'batch_size', 1: 'time'},
-        'periodicity': {0: 'batch_size', 1: 'time'},
-        'f0_mask': {0: 'batch_size', 1: 'time'},
-        'wav': {0: "batch_size", 1: "time"},
+        'f0': {0: 'batch_size', 1: 'f0_length'},
+        'periodicity': {0: 'batch_size', 1: 'f0_length'},
+        'f0_mask': {0: 'batch_size', 1: 'f0_length'},
+        'wav': {0: "batch_size", 1: "f0_length"},
         "wav_lengths": {0: "batch_size"},
     }
 
-    Path(args.output_dir).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
     fused_model.to_onnx(
-        args.output_dir,
+        args.output,
         dummy_input,
         input_names=input_names,
         output_names=output_names,
@@ -136,7 +136,7 @@ def main():
         do_constant_folding=True,
     )
 
-    logger.info(f"ONNX model export to {args.output_dir}")
+    logger.info(f"ONNX model export to {args.output}")
 
 if __name__ == '__main__':
     main()
