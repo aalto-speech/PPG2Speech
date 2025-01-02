@@ -1,5 +1,6 @@
 import torch
 import json
+from scipy.io.wavfile import write
 from pathlib import Path
 from typing import Tuple
 from ..models import VQVAEMatcha
@@ -43,3 +44,20 @@ def mask_to_length(mask: torch.Tensor) -> torch.Tensor:
      """
      lengths = (~mask).sum(dim=1)
      return lengths
+
+def make_single_audio_mask(w2v2_len: int, pitch_len: int):
+    w2v2_mask = torch.full((1, w2v2_len), False)
+    pitch_mask = torch.full((1, pitch_len), False)
+
+    return w2v2_mask, pitch_mask
+
+def write_wav(output_dir: str, wav_name: str, wav: torch.Tensor, wav_length: torch.Tensor):
+    path = f"{output_dir}/{wav_name}"
+
+    audio = wav[:wav_length]
+
+    audio = audio * 32768.0
+    audio = audio.cpu().numpy().astype('int16')
+
+    write(path, 22050, audio)
+    print(path, flush=True)
