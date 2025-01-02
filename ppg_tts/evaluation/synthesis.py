@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from typing import Tuple
 from ..dataset import ExtendDataset, PersoCollateFn
 from ..models import VQVAEMatcha
-from ..utils import build_parser
+from ..utils import build_parser, load_VQVAEMatcha
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
     random_idx = random.randint(0, len(testset) - 1)
@@ -22,21 +22,9 @@ def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.T
 if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
-    ckpt = torch.load(args.ckpt, map_location=args.device)
 
     logger.info(f"Load checkpoint from {args.ckpt}, device is {args.device}")
-
-    with open(ckpt['hyper_parameters']['pitch_stats'], "r") as reader:
-            pitch_stats = json.load(reader)
-
-    model = VQVAEMatcha(
-        **ckpt['hyper_parameters'],
-        **pitch_stats,
-    )
-
-    weights = {k.replace('model.', ''): v for k, v in ckpt['state_dict'].items()}
-
-    model.load_state_dict(weights)
+    model, diff_steps, temperature = load_VQVAEMatcha(args.ckpt, args.device)
 
     logger.info(f"Load testset from {args.data_dir}")
 
@@ -92,8 +80,8 @@ if __name__ == "__main__":
             pitch_target=shifted_pitch,
             v_flag=testdata['v_flag'],
             mel_mask=testdata['mel_mask'],
-            diff_steps=ckpt['hyper_parameters']['diff_steps'],
-            temperature=ckpt['hyper_parameters']['temperature']
+            diff_steps=diff_steps,
+            temperature=temperature,
         )
 
         saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
