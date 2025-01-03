@@ -7,7 +7,6 @@ from .tts.LightningModule import ConformerTTSModel, ConformerWavenetTTSModel
 def cli_main():
     seed_everything(17, workers=True)
     torch.set_float32_matmul_precision('high')
-    torch.autograd.set_detect_anomaly(True)
     cli = LightningCLI(save_config_kwargs={"overwrite": True})
 
 if __name__ == "__main__":

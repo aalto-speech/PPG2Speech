@@ -123,6 +123,8 @@ def main():
         "wav_lengths": {0: "batch_size"},
     }
 
+    logger.error("Currently the exported ONNX model fails to track the dynamic of the sequence_length.")
+
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
     fused_model.to_onnx(

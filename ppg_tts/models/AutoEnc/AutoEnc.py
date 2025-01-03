@@ -31,7 +31,7 @@ class ResidualConvLayer(nn.Module):
             padding=padding
         )
         if instance_norm:
-            self.norm = nn.InstanceNorm1d(channels) #, track_running_stats=True)
+            self.norm = nn.InstanceNorm1d(channels, track_running_stats=True)
         else:
             self.norm = nn.BatchNorm1d(channels)
         self.activation = nn.ReLU()
