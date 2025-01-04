@@ -31,4 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--switch_speaker',
                         help='whether to switch the speaker embedding during inference',
                         action='store_true')
+    parser.add_argument(
+        '--normalize_pitch',
+        help='whether to normalize the pitch during pitch extraction',
+        action='store_true'
+    )
     return parser

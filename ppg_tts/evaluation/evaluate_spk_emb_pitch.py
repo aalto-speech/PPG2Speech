@@ -97,5 +97,6 @@ if __name__ == "__main__":
             shutil.copyfile(source_wav_path, f"{args.flip_wav_dir}/{source_key}_context_reference.wav")
 
     avg_simi /= len(dataset)
+    avg_pitch_corr /= len(dataset)
 
     logger.info(f"The average cosine similarity is {avg_simi}, average pitch correlation is {avg_pitch_corr}")
