@@ -41,9 +41,9 @@ if __name__ == '__main__':
                     continue
                 if args.normalize_pitch:
                         f0 = s.fit_transform(
-                            f0.log().numpy()
+                            f0.log().numpy().T
                         )
                 else:
                     f0 = f0.log().numpy()
-                writer(key, f0.squeeze(0))
+                writer(key, f0.squeeze())
                 voiced_writer(key, period.log().squeeze(0).numpy())
