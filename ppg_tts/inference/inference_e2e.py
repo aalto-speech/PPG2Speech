@@ -3,9 +3,9 @@ import torchaudio
 import penn
 import random
 import numpy as np
+import torch
 from time import perf_counter
 from transformers import Wav2Vec2ForCTC
-import torch
 from loguru import logger
 from pathlib import Path
 from ..utils import load_VQVAEMatcha, load_hifigan, mask_to_length, make_single_audio_mask, write_wav
@@ -53,8 +53,8 @@ def inference_single_audio(audio_path: str,
 
     periodicity = torch.log(periodicity)
     pitch = torch.log(pitch)
-    pitch_median = pitch.median()
-    pitch = pitch * target_pitch_median / pitch_median
+    
+    pitch = (pitch - pitch.mean()) / pitch.std()
 
     penn_infer = perf_counter() - t0 - w2v2_infer
 
