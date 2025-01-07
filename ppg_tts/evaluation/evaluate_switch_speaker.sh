@@ -39,7 +39,7 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
 fi
 
 if [ $start -le 2 ] && [ $end -ge 2 ]; then
-    echo "Calculate speaker embedding distance between original target speaker wavs and generated target speaker wavs"
+    echo "Calculate speaker embedding distance between original target speaker wavs and generated target speaker wavs, evaluate pitch MAE between source audio and synthesized audio"
 
     python -m ppg_tts.evaluation.evaluate_spk_emb_pitch --data_dir ${testset} --flip_wav_dir ${exp_dir}/flip_generate_wav_$vocoder --device ${device}
 fi

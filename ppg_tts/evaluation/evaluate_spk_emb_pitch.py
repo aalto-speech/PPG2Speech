@@ -17,10 +17,10 @@ compute_pitch = partial(
     fmax=700,
     center='zero',
     checkpoint=None,
-    interp_unvoiced_at=None,
+    interp_unvoiced_at=0.2,
 )
 
-def compute_pitch_correlation(audio1: str, audio2: str) ->Tuple[float, float]:
+def compute_pitch_mae(audio1: str, audio2: str) -> float:
     x1, sr1 = torchaudio.load(audio1)
     x2, sr2 = torchaudio.load(audio2)
 
@@ -41,10 +41,14 @@ def compute_pitch_correlation(audio1: str, audio2: str) ->Tuple[float, float]:
 
     min_length = min(pitch1.size(-1), pitch2.size(-1))
 
-    return pearsonr(
-        x = pitch1.squeeze().numpy()[:min_length],
-        y = pitch2.squeeze().numpy()[:min_length],
-    )
+    pitch1 = pitch1[:, :min_length]
+    pitch2 = pitch2[:, :min_length]
+
+    pitch1 = (pitch1 - pitch1.mean()) / pitch1.var()
+
+    pitch2 = (pitch2 - pitch2.mean()) / pitch2.var()
+
+    return (pitch1 - pitch2).abs().mean().item()
 
 
 if __name__ == "__main__":
@@ -58,7 +62,7 @@ if __name__ == "__main__":
         mapping = reader.readlines()
     
     avg_simi = 0.0
-    avg_pitch_corr = 0.0
+    avg_pitch_mae = 0.0
     for entry in mapping:
         source_key, target_key = entry.strip("\n").split()
 
@@ -72,24 +76,19 @@ if __name__ == "__main__":
             target_wav_path
         )
 
-        pitch_sequence_stats = compute_pitch_correlation(
+        pitch_mae = compute_pitch_mae(
             source_wav_path,
             synthesized_wav_path,
         )
 
         avg_simi += similarity
 
-        avg_pitch_corr += (pitch_sequence_stats[0] if pitch_sequence_stats[1] <= 0.05 else 0)
+        avg_pitch_mae += pitch_mae
 
         logger.info(
             f"Cosine similarity between {source_key} and {target_key} is {similarity},"
-            f"The pearson correlation is {pitch_sequence_stats[0]} with p-value {pitch_sequence_stats[1]}"
+            f"The pitch mae is {pitch_mae}"
         )
-
-        if pitch_sequence_stats[1] > 0.05:
-            logger.warning(
-                f"{synthesized_wav_path} doesn't follow the source pitch well."
-            )
 
         if args.debug:
             shutil.copyfile(target_wav_path, f"{args.flip_wav_dir}/{source_key}_speaker_reference.wav")
@@ -97,6 +96,6 @@ if __name__ == "__main__":
             shutil.copyfile(source_wav_path, f"{args.flip_wav_dir}/{source_key}_context_reference.wav")
 
     avg_simi /= len(dataset)
-    avg_pitch_corr /= len(dataset)
+    avg_pitch_mae /= len(dataset)
 
-    logger.info(f"The average cosine similarity is {avg_simi}, average pitch correlation is {avg_pitch_corr}")
+    logger.info(f"The average cosine similarity is {avg_simi}, average pitch mae is {avg_pitch_mae}")
