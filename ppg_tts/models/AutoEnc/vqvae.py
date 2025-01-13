@@ -103,7 +103,7 @@ class VQVAE(nn.Module):
 
         z = rearrange(z, 'b e t -> b t e')
 
-        z_q, e_loss, c_loss = self.vq.forward(z, mask)
+        z_q, e_loss, c_loss, center_idx = self.vq.forward(z, mask)
 
         z_dec = rearrange(z_q, 'b t e -> b e t')
 
@@ -116,4 +116,4 @@ class VQVAE(nn.Module):
 
         z_dec = rearrange(self.output(z_dec), 'b e t -> b t e')
 
-        return z_q, z_dec, e_loss, c_loss
+        return z_q, z_dec, e_loss, c_loss, center_idx

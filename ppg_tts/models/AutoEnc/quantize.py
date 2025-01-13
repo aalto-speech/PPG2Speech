@@ -59,4 +59,4 @@ class QuantizeLayer(nn.Module):
 
         z_q = x + (z_q - x).detach()
 
-        return z_q, embedding_loss, commitment_loss
+        return z_q, embedding_loss, commitment_loss, center_idx
