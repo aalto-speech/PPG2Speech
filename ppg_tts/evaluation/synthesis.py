@@ -8,7 +8,6 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from typing import Tuple
 from ..dataset import ExtendDataset, PersoCollateFn
-from ..models import VQVAEMatcha
 from ..utils import build_parser, load_VQVAEMatcha
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
@@ -60,16 +59,9 @@ if __name__ == "__main__":
         source_key = testdata['keys'][0]
         if args.switch_speaker:
             target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
-            
-            # Pitch shift in inference
-            curr_speaker = source_key.split('_')[0]
-            target_speaker = target_key.split('_')[0]
-            curr_median = speaker_median[curr_speaker]
-            target_median = speaker_median[target_speaker]
-            shifted_pitch = testdata['log_F0'] * target_median / curr_median
         else:
             target_key, target_spk_emb = source_key, testdata['spk_emb'].squeeze(0)
-            shifted_pitch = testdata['log_F0']
+        target_pitch = testdata['log_F0']
         logger.info(f"generate {source_key} with speaker embedding from {target_key}")
         print(f"{source_key} {target_key}", file=speaker_mapping)
 
@@ -77,7 +69,7 @@ if __name__ == "__main__":
             x=testdata['ppg'],
             x_mask=testdata['ppg_mask'],
             spk_emb=target_spk_emb.unsqueeze(0),
-            pitch_target=shifted_pitch,
+            pitch_target=target_pitch,
             v_flag=testdata['v_flag'],
             mel_mask=testdata['mel_mask'],
             diff_steps=diff_steps,
