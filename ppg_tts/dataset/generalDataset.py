@@ -4,7 +4,7 @@ from loguru import logger
 from pathlib import Path
 from speechbrain.lobes.models.HifiGAN import mel_spectogram
 from torch.utils.data import Dataset
-from kaldiio import ReadHelper
+from kaldiio import ReadHelper, load_ark
 from torch.nn.functional import interpolate
 
 class BaseDataset(Dataset):
@@ -52,7 +52,14 @@ class BaseDataset(Dataset):
                                              new_freq=self.target_sr)
         
         return key, wav, sr, self.key2text[key]
-
+    
+    def _read_scp_ark(self, scp_path: Path):
+        key2feat = {}
+        with ReadHelper(f"scp:{scp_path}") as reader:
+            for key, array in reader:
+                key2feat[key] = array
+        
+        return key2feat
 
 class ExtendDataset(BaseDataset):
     def __init__(self, data_dir: str, target_sr: int=22050, no_ctc: bool=True):
@@ -128,12 +135,3 @@ class ExtendDataset(BaseDataset):
                 "log_F0": torch.from_numpy(self.log_F0[key].copy()),
                 "energy": energy.squeeze(),
                 "v_flag": torch.from_numpy(self.v_flag[key].copy())}
-
-    def _read_scp_ark(self, scp_path: Path):
-        key2feat = {}
-        with ReadHelper(f"scp:{scp_path}") as reader:
-            for key, array in reader:
-                key2feat[key] = array
-        
-        return key2feat
-        
