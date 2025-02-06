@@ -88,7 +88,6 @@ class PPGMatcha(nn.Module):
                 v_flag: torch.Tensor,
                 mel_target: torch.Tensor,
                 mel_mask: torch.Tensor,
-                joint_flag: bool,
                 x_mask: torch.Tensor,) \
         -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
