@@ -66,8 +66,27 @@ class ConvReluNorm(nn.Module):
         return out.masked_fill(mask, 0.0)
     
 class RoFormerWrapper(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,
+                 input_dim: int,
+                 ffn_dim: int,
+                 nhead: int,
+                 dropout: float,
+                 nlayers: int,
+                 **kwargs,):
+        super().__init__()
+        assert (input_dim / 2) % nhead == 0, "Wrong input dim"
+        self.config = RoFormerConfig(
+            hidden_size=input_dim,
+            num_attention_heads=nhead,
+            num_hidden_layers=nlayers,
+            intermediate_size=ffn_dim,
+            hidden_dropout_prob=dropout,
+            attention_probs_dropout_prob=0.0,
+        )
+
+        self.encoder = RoFormerModel(
+            config=self.config
+        )
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
         """
@@ -77,7 +96,16 @@ class RoFormerWrapper(nn.Module):
         Return:
             a tensor of shape (B, T, E)
         """
-        pass
+        mask = (~x_mask).to(torch.float32)
+        output = self.encoder.forward(
+            inputs_embeds=x,
+            attention_mask=mask
+        )
+
+        return output.last_hidden_state.masked_fill(
+            rearrange(x_mask, 'b t -> b t 1'),
+            0.0
+        )
 
 class RelPosTransformerWrapper(nn.Module):
     def __init__(self,

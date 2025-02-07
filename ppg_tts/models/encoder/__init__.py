@@ -1,1 +1,1 @@
-from .encoders import ConvReluNorm, RelPosTransformerWrapper
+from .encoders import ConvReluNorm, RelPosTransformerWrapper, RoFormerWrapper
