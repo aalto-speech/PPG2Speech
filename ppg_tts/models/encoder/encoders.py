@@ -1,6 +1,11 @@
+from typing import Optional
 import torch
 from torch import nn
 from einops import rearrange
+from speechbrain.lobes.models.transformer.Transformer import TransformerEncoder
+from speechbrain.lobes.models.transformer.Conformer import ConformerEncoder
+from speechbrain.nnet.attention import RelPosEncXL
+from transformers import RoFormerConfig, RoFormerModel
 
 class ConvReluNorm(nn.Module):
     def __init__(self,
@@ -59,4 +64,75 @@ class ConvReluNorm(nn.Module):
         mask = rearrange(x_mask, 'b t -> b t 1')
 
         return out.masked_fill(mask, 0.0)
+    
+class RoFormerWrapper(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: input tensor of shape (B, T, E)
+            x_mask: input tensor of shape (B, T)
+        Return:
+            a tensor of shape (B, T, E)
+        """
+        pass
+
+class RelPosTransformerWrapper(nn.Module):
+    def __init__(self,
+                 input_dim: int,
+                 ffn_dim: int,
+                 nhead: int,
+                 dropout: float,
+                 nlayers: int,
+                 kernel_size: Optional[int] = None,
+                 transformer_type: str = 'conformer',
+                 **kwargs,
+                 ):
+        super().__init__()
+        self.relative_pe = RelPosEncXL(input_dim)
+
+        if transformer_type == 'transformer':
+            self.encoder = TransformerEncoder(
+                num_layers = nlayers,
+                nhead = nhead,
+                d_ffn = ffn_dim,
+                d_model = input_dim,
+                dropout = dropout,
+                attention_type = 'RelPosMHAXL',
+            )
+        elif transformer_type == 'conformer':
+            assert kernel_size is not None, "kernel_size must be specified if using conformer"
+            self.encoder = ConformerEncoder(
+                num_layers = nlayers,
+                d_model = input_dim,
+                d_ffn = ffn_dim,
+                nhead = nhead,
+                dropout = dropout,
+                kernel_size = kernel_size,
+            )
+        else:
+            raise ValueError(f"transformer_type {transformer_type} is unknown.")
+
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: input tensor of shape (B, T, E)
+            x_mask: input tensor of shape (B, T)
+        Return:
+            a tensor of shape (B, T, E)
+        """
+        pe = self.relative_pe(
+            x = x,
+        )
+
+        mask = rearrange(x_mask, 'b t -> b t 1')
+
+        out, _ = self.encoder(
+            src = x,
+            src_key_padding_mask = x_mask,
+            pos_embs = pe,
+        )
+
+        return out.masked_fill(mask, 0.0)

@@ -1,6 +1,49 @@
 import torch
 import unittest
-from ppg_tts.models.encoder import ConvReluNorm
+from ppg_tts.models.encoder import ConvReluNorm, RelPosTransformerWrapper
+
+class TestRelPosTransformerWrapper(unittest.TestCase):
+    def setUp(self):
+        self.trans = RelPosTransformerWrapper(
+            input_dim=10,
+            ffn_dim=40,
+            nhead=2,
+            nlayers=2,
+            dropout=0.1,
+            transformer_type='transformer',
+        )
+
+        self.con = RelPosTransformerWrapper(
+            input_dim=10,
+            ffn_dim=40,
+            nhead=2,
+            nlayers=2,
+            dropout=0.1,
+            kernel_size=3,
+        )
+
+        self.x = torch.randn((2,8,10))
+
+        self.x_mask = torch.tensor([
+            [False, False, False, False, False, True, True, True],
+            [False, False, False, False, False, False, False, False]
+        ])
+
+    def testTransformerForward(self):
+        out = self.trans.forward(
+            x = self.x,
+            x_mask = self.x_mask,
+        )
+
+        self.assertTupleEqual(out.shape, (2,8,10))
+
+    def testConformerForward(self):
+        out = self.con.forward(
+            x = self.x,
+            x_mask = self.x_mask,
+        )
+
+        self.assertTupleEqual(out.shape, (2,8,10))
 
 class TestConvReluNorm(unittest.TestCase):
     def setUp(self):
