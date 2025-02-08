@@ -64,50 +64,9 @@ class ConvReluNorm(nn.Module):
         mask = rearrange(x_mask, 'b t -> b t 1')
 
         return out.masked_fill(mask, 0.0)
-    
-class RoFormerWrapper(nn.Module):
-    def __init__(self,
-                 input_dim: int,
-                 ffn_dim: int,
-                 nhead: int,
-                 dropout: float,
-                 nlayers: int,
-                 **kwargs,):
-        super().__init__()
-        assert (input_dim / 2) % nhead == 0, "Wrong input dim"
-        self.config = RoFormerConfig(
-            hidden_size=input_dim,
-            num_attention_heads=nhead,
-            num_hidden_layers=nlayers,
-            intermediate_size=ffn_dim,
-            hidden_dropout_prob=dropout,
-            attention_probs_dropout_prob=0.0,
-        )
 
-        self.encoder = RoFormerModel(
-            config=self.config
-        )
 
-    def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            x: input tensor of shape (B, T, E)
-            x_mask: input tensor of shape (B, T)
-        Return:
-            a tensor of shape (B, T, E)
-        """
-        mask = (~x_mask).to(torch.float32)
-        output = self.encoder.forward(
-            inputs_embeds=x,
-            attention_mask=mask
-        )
-
-        return output.last_hidden_state.masked_fill(
-            rearrange(x_mask, 'b t -> b t 1'),
-            0.0
-        )
-
-class RelPosTransformerWrapper(nn.Module):
+class TransformerWrapper(nn.Module):
     def __init__(self,
                  input_dim: int,
                  ffn_dim: int,
@@ -140,8 +99,24 @@ class RelPosTransformerWrapper(nn.Module):
                 dropout = dropout,
                 kernel_size = kernel_size,
             )
+        elif transformer_type == 'roformer':
+            assert (input_dim / 2) % nhead == 0, "Wrong input dim"
+            self.config = RoFormerConfig(
+                hidden_size=input_dim,
+                num_attention_heads=nhead,
+                num_hidden_layers=nlayers,
+                intermediate_size=ffn_dim,
+                hidden_dropout_prob=dropout,
+                attention_probs_dropout_prob=0.0,
+            )
+
+            self.encoder = RoFormerModel(
+                config=self.config
+            )
         else:
             raise ValueError(f"transformer_type {transformer_type} is unknown.")
+        
+        self.transformer_type = transformer_type
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
         """
@@ -151,16 +126,28 @@ class RelPosTransformerWrapper(nn.Module):
         Return:
             a tensor of shape (B, T, E)
         """
-        pe = self.relative_pe(
-            x = x,
-        )
+        if self.transformer_type == 'roformer':
+            mask = (~x_mask).to(torch.float32)
+            output = self.encoder.forward(
+                inputs_embeds=x,
+                attention_mask=mask
+            )
 
-        mask = rearrange(x_mask, 'b t -> b t 1')
+            return output.last_hidden_state.masked_fill(
+                rearrange(x_mask, 'b t -> b t 1'),
+                0.0
+            )
+        else:
+            pe = self.relative_pe(
+                x = x,
+            )
 
-        out, _ = self.encoder(
-            src = x,
-            src_key_padding_mask = x_mask,
-            pos_embs = pe,
-        )
+            mask = rearrange(x_mask, 'b t -> b t 1')
 
-        return out.masked_fill(mask, 0.0)
+            out, _ = self.encoder(
+                src = x,
+                src_key_padding_mask = x_mask,
+                pos_embs = pe,
+            )
+
+            return out.masked_fill(mask, 0.0)
