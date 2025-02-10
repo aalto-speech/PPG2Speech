@@ -22,7 +22,6 @@ class PPGMatcha(nn.Module):
                  pitch_emb_size: int,
                  dropout: float=0.1,
                  target_dim: int=80,
-                 no_ctc: bool=False,
                  sigma_min: float=1e-4,
                  transformer_type: str='transformer',
                  hidden_transformer_type: str='conformer',
@@ -31,11 +30,6 @@ class PPGMatcha(nn.Module):
                  hidden_kernel_size: int = 5,
                  **kwargs):
         super(PPGMatcha, self).__init__()
-
-        self.no_ctc = no_ctc
-
-        if no_ctc:
-            assert ppg_dim == 1024, "Wrong input dimension with no_ctc option"
 
         self.spk_enc = SpeakerEmbeddingEncoder(
             input_size=spk_emb_size,

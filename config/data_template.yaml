@@ -3,4 +3,4 @@ data:
   init_args:
     data_dir: /scratch/elec/t412-speechsynth/DATA/fin-mix
     batch_size: 32
-    no_ctc: true
+    no_ctc: False
