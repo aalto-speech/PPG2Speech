@@ -151,3 +151,45 @@ class TransformerWrapper(nn.Module):
             )
 
             return out.masked_fill(mask, 0.0)
+
+class PPGEncoder(nn.Module):
+    def __init__(self,
+                 in_channels: int,
+                 hidden_channels: int,
+                 kernel_size: int,
+                 conv_n_layers: int,
+                 ffn_dim: int,
+                 nhead: int,
+                 dropout: float,
+                 nlayers: int,
+                 transformer_kernel_size: Optional[int] = None,
+                 transformer_type: str = 'conformer'):
+        super().__init__()
+
+        self.prenet = ConvReluNorm(
+            in_channels=in_channels,
+            hidden_channels=hidden_channels,
+            out_channels=hidden_channels,
+            kernel_size=kernel_size,
+            n_layers=conv_n_layers,
+            p_dropout=dropout,
+        )
+
+        self.encoder = TransformerWrapper(
+            input_dim=hidden_channels,
+            ffn_dim=ffn_dim,
+            nhead=nhead,
+            dropout=dropout,
+            kernel_size=transformer_kernel_size,
+            transformer_type=transformer_type,
+            nlayers=nlayers,
+        )
+
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
+        return self.encoder.forward(
+            self.prenet.forward(
+                x=x,
+                x_mask=x_mask,
+            ),
+            x_mask=x_mask,
+        )

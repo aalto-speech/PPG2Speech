@@ -3,7 +3,7 @@ from einops import repeat
 from torch import nn
 from .matcha.flow_matching import CFM
 from .matcha.RoPE import RotaryPositionalEmbeddings
-from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder, HiddenEncoderConformer
+from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder
 from .AutoEnc import VQVAE
 from typing import List, Tuple
 
@@ -61,19 +61,13 @@ class VQVAEMatcha(nn.Module):
             d=encode_dim
         )
 
-        if hidden_trans_type == 'conformer':
-            self.channel_mapping = HiddenEncoderConformer(
-                input_channel=encode_dim,
-                output_channel=target_dim,
-                n_layers=n_trans_layers,
-                kernel_size=hidden_kernel_size,
-            )
-        else:
-            self.channel_mapping = HiddenEncoder(
-                input_channel=encode_dim,
-                output_channel=target_dim,
-                n_layers=n_trans_layers,
-            )
+        self.channel_mapping = HiddenEncoder(
+            input_channel=encode_dim,
+            output_channel=target_dim,
+            n_layers=n_trans_layers,
+            kernel_size=hidden_kernel_size,
+            transformer_type=hidden_trans_type,
+        )
 
         self.cond_channel_mapping = nn.Sequential(
             nn.Conv1d(

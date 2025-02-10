@@ -1,1 +1,1 @@
-from .encoders import ConvReluNorm, TransformerWrapper
+from .encoders import ConvReluNorm, TransformerWrapper, PPGEncoder

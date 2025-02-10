@@ -2,9 +2,8 @@ import torch
 from einops import repeat
 from torch import nn
 from .matcha.flow_matching import CFM
-from .matcha.RoPE import RotaryPositionalEmbeddings
-from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder, HiddenEncoderConformer
-from .AutoEnc import VQVAE
+from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder
+from .encoder import PPGEncoder
 from typing import List, Tuple
 
 class PPGMatcha(nn.Module):
@@ -13,21 +12,22 @@ class PPGMatcha(nn.Module):
                  encode_dim: int,
                  spk_emb_size: int,
                  spk_emb_enc_dim: int,
+                 num_encoder_layers: int,
+                 num_prenet_layers: int,
+                 num_hidden_layers: int,
                  decoder_num_mid_block: int,
                  decoder_num_block: int,
                  pitch_min: float,
                  pitch_max: float,
                  pitch_emb_size: int,
-                 num_emb: int,
                  dropout: float=0.1,
                  target_dim: int=80,
                  no_ctc: bool=False,
                  sigma_min: float=1e-4,
                  transformer_type: str='transformer',
-                 ae_kernel_sizes: List[int] = [3,3,1],
-                 ae_dilations: List[int] = [2,4,8],
-                 hidden_trans_type: str='transformer',
-                 n_trans_layers: int = 2,
+                 hidden_transformer_type: str='conformer',
+                 encode_transformer_type: str='roformer',
+                 nhead: int=4,
                  hidden_kernel_size: int = 5,
                  **kwargs):
         super(PPGMatcha, self).__init__()
@@ -49,10 +49,26 @@ class PPGMatcha(nn.Module):
         )
 
         #! Use prenet + transformer to encode PPG
-        self.ppg_encoder = None
+        self.ppg_encoder = PPGEncoder(
+            in_channels=ppg_dim,
+            hidden_channels=encode_dim,
+            kernel_size=hidden_kernel_size,
+            conv_n_layers=num_prenet_layers,
+            ffn_dim=nhead * encode_dim,
+            nhead=nhead,
+            dropout=dropout,
+            nlayers=num_encoder_layers,
+            transformer_type=encode_transformer_type,
+            transformer_kernel_size=hidden_kernel_size,
+        )
 
-        #! Use conv net to smooth interpolate PPG hidden
-        self.channel_mapping = None
+        self.channel_mapping = HiddenEncoder(
+            input_channel=encode_dim,
+            output_channel=target_dim,
+            n_layers=num_hidden_layers,
+            kernel_size=hidden_kernel_size,
+            transformer_type=hidden_transformer_type,
+        )
 
         self.cond_channel_mapping = nn.Sequential(
             nn.Conv1d(
@@ -89,7 +105,7 @@ class PPGMatcha(nn.Module):
                 mel_target: torch.Tensor,
                 mel_mask: torch.Tensor,
                 x_mask: torch.Tensor,) \
-        -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        -> torch.Tensor:
         """
         Arguments:
             x: input PPG, shape (B, T_ppg, E)
@@ -101,9 +117,6 @@ class PPGMatcha(nn.Module):
             x_mask: optional mask for input PPG. Shape (B, T_ppg). Could be the same as mel_mask
         Returns:
             diffusion loss
-            reconstructed x
-            embedding loss
-            commitment loss
         """
         _, T = pitch_target.shape
         enc_spk_emb = self.spk_enc(spk_emb).squeeze(1) # B,E -> B,E'
@@ -119,7 +132,10 @@ class PPGMatcha(nn.Module):
         cond_enc = cond_enc.masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         #! Get hidden representations of PPG
-        ppg_hidden = self.ppg_encoder()
+        ppg_hidden = self.ppg_encoder.forward(
+            x=x,
+            x_mask=x_mask,
+        )
 
         #! Upsample ppg_hidden to pitch time resolution
         z = nn.functional.interpolate(
@@ -189,21 +205,17 @@ class PPGMatcha(nn.Module):
                   diff_steps: int=300,
                   temperature: float=0.667,
                   x_mask: torch.Tensor = None,) \
-        -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        -> torch.Tensor:
         """
         Arguments:
             x: input PPG, shape (B, T_ppg, E)
             spk_emb: speaker_embedding, shape (B, E_spk)
             pitch_target: shape (B, T_mel)
             v_flag: shape (B, T_mel)
-            mel_target: shape (B, T, E),
             mel_mask: shape (B, T), bool tensor
             x_mask: optional mask for input PPG. Shape (B, T_ppg). Could be the same as mel_mask
         Returns:
             pred_mel: shape (B, T, 80)
-            reconstructed x: same shape as x
-            embedding loss
-            commitment loss
         """
         pad_to_odd = False
         _, T = pitch_target.shape
@@ -220,7 +232,10 @@ class PPGMatcha(nn.Module):
         cond_enc = cond_enc.masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         #! Get hidden representations of PPG
-        ppg_hidden = self.ppg_encoder()
+        ppg_hidden = self.ppg_encoder.forward(
+            x=x,
+            x_mask=x_mask,
+        )
 
         #! Upsample ppg_hidden to pitch time resolution
         z = nn.functional.interpolate(

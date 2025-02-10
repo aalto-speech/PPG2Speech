@@ -1,82 +1,51 @@
 import torch
 import numpy as np
 from einops import rearrange
+from typing import Optional
 from torch import nn
 from torchaudio.models.conformer import ConformerLayer
 from collections import OrderedDict
 from .AutoEnc.AutoEnc import ResidualConvLayer
-
-class HiddenEncoderConformer(nn.Module):
-    def __init__(self,
-                 input_channel: int,
-                 output_channel: int,
-                 n_layers: int,
-                 kernel_size: int,
-                 ):
-        super(HiddenEncoderConformer, self).__init__()
-
-        self.conformer_layers = nn.ModuleList()
-
-        for _ in range(n_layers):
-            self.conformer_layers.append(
-                ConformerLayer(
-                    input_dim=input_channel,
-                    ffn_dim=4*input_channel,
-                    num_attention_heads=4,
-                    depthwise_conv_kernel_size=kernel_size,
-                    dropout=0.1,
-                )
-            )
-
-        self.output = nn.Conv1d(
-            in_channels=input_channel,
-            out_channels=output_channel,
-            kernel_size=1
-        )
-
-    def forward(self,
-                x: torch.Tensor,
-                mask: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            x: shape (B, T, E)
-            mask: shape (B, T, 1)
-        Returns:
-            shape (B, T, E_out)
-        """
-        x = rearrange(x, 'b t c -> t b c')
-        for layer in self.conformer_layers:
-            x = layer(x, key_padding_mask=mask.squeeze(-1))
-
-        x_reshape = rearrange(x, 't b c -> b c t')
-
-        out = self.output(x_reshape)
-
-        out = rearrange(out, 'b c t -> b t c')
-
-        return out.masked_fill(mask, 0.0)
 
 class HiddenEncoder(nn.Module):
     def __init__(self,
                  input_channel: int,
                  output_channel: int,
                  n_layers: int,
+                 kernel_size: Optional[int]=None,
                  activation: str='gelu',
+                 transformer_type: str='conformer',
                  ):
         super(HiddenEncoder, self).__init__()
 
+        self.transformer_type = transformer_type
         self.transformer_layers = nn.ModuleList()
 
-        for _ in range(n_layers):
-            self.transformer_layers.append(
-                nn.TransformerEncoderLayer(
-                    d_model=input_channel,
-                    nhead=4,
-                    dim_feedforward=4 * input_channel,
-                    batch_first=True,
-                    activation=activation,
+        if transformer_type == 'transformer':
+            for _ in range(n_layers):
+                self.transformer_layers.append(
+                    nn.TransformerEncoderLayer(
+                        d_model=input_channel,
+                        nhead=4,
+                        dim_feedforward=4 * input_channel,
+                        batch_first=True,
+                        activation=activation,
+                    )
                 )
-            )
+        elif transformer_type == 'conformer':
+            assert kernel_size is not None, "Kernel size should be specified when using Conformer"
+            for _ in range(n_layers):
+                self.transformer_layers.append(
+                    ConformerLayer(
+                        input_dim=input_channel,
+                        ffn_dim=4*input_channel,
+                        num_attention_heads=4,
+                        depthwise_conv_kernel_size=kernel_size,
+                        dropout=0.1,
+                    )
+                )
+        else:
+            raise ValueError(f"Invalid transformer type: {transformer_type}")
 
         self.output = nn.Conv1d(
             in_channels=input_channel,
@@ -94,10 +63,15 @@ class HiddenEncoder(nn.Module):
         Returns:
             shape (B, T, E_out)
         """
-        for layer in self.transformer_layers:
-            x = layer(x, src_key_padding_mask=mask.squeeze(-1))
-
-        x_reshape = rearrange(x, 'b t c -> b c t')
+        if self.transformer_type == 'transformer':
+            for layer in self.transformer_layers:
+                x = layer(x, src_key_padding_mask=mask.squeeze(-1))
+            x_reshape = rearrange(x, 'b t c -> b c t')
+        else:
+            x = rearrange(x, 'b t c -> t b c')
+            for layer in self.transformer_layers:
+                x = layer(x, key_padding_mask=mask.squeeze(-1))
+            x_reshape = rearrange(x, 't b c -> b c t')
 
         out = self.output(x_reshape)
 
