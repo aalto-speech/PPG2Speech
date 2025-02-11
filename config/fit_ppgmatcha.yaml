@@ -79,6 +79,7 @@ model:
     encode_transformer_type: conformer
     nhead: 4
     hidden_kernel_size: 5
+    pre_kernel_size: 5
     lr: 1e-4
     gamma: 0.98
     diff_steps: 10

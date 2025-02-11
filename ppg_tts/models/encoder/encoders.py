@@ -108,6 +108,7 @@ class TransformerWrapper(nn.Module):
                 intermediate_size=ffn_dim,
                 hidden_dropout_prob=dropout,
                 attention_probs_dropout_prob=0.0,
+                max_position_embeddings=16384,
             )
 
             self.encoder = RoFormerModel(
@@ -128,10 +129,15 @@ class TransformerWrapper(nn.Module):
         """
         if self.transformer_type == 'roformer':
             mask = (~x_mask).to(torch.float32)
-            output = self.encoder.forward(
-                inputs_embeds=x,
-                attention_mask=mask
-            )
+            try:
+                output = self.encoder.forward(
+                    inputs_embeds=x,
+                    attention_mask=mask
+                )
+            except:
+                print(x.shape)
+                print(mask.shape)
+                print(self.encoder.config.hidden_size)
 
             return output.last_hidden_state.masked_fill(
                 rearrange(x_mask, 'b t -> b t 1'),

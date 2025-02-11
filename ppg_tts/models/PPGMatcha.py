@@ -27,6 +27,7 @@ class PPGMatcha(nn.Module):
                  hidden_transformer_type: str='conformer',
                  encode_transformer_type: str='roformer',
                  nhead: int=4,
+                 pre_kernel_size: int = 3,
                  hidden_kernel_size: int = 5,
                  **kwargs):
         super(PPGMatcha, self).__init__()
@@ -46,7 +47,7 @@ class PPGMatcha(nn.Module):
         self.ppg_encoder = PPGEncoder(
             in_channels=ppg_dim,
             hidden_channels=encode_dim,
-            kernel_size=hidden_kernel_size,
+            kernel_size=pre_kernel_size,
             conv_n_layers=num_prenet_layers,
             ffn_dim=nhead * encode_dim,
             nhead=nhead,

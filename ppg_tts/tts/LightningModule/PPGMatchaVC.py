@@ -29,6 +29,7 @@ class PPGMatchaVC(L.LightningModule):
                  encode_transformer_type: str='roformer',
                  nhead: int=4,
                  hidden_kernel_size: int = 5,
+                 pre_kernel_size: int = 3,
                  lr: float=1e-4,
                  gamma: float=0.98,
                  diff_steps: int=10,
@@ -72,6 +73,7 @@ class PPGMatchaVC(L.LightningModule):
             encode_transformer_type=encode_transformer_type,
             nhead=nhead,
             hidden_kernel_size=hidden_kernel_size,
+            pre_kernel_size=pre_kernel_size,
         )
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
