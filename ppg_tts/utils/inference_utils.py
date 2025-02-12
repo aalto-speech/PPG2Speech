@@ -1,19 +1,53 @@
+import importlib
 import torch
 import json
 from scipy.io.wavfile import write
 from pathlib import Path
 from typing import Tuple
-from ..models import VQVAEMatcha
 from vocoder.hifigan.env import AttrDict
 from vocoder.hifigan.models import Generator as HiFiGAN
 
-def load_VQVAEMatcha(ckpt_path: str, device: str='cpu') -> Tuple[torch.nn.Module, int, float]:
+def import_obj_from_string(obj_path: str) -> object:
+    """
+    Given a string representing a Python object path (e.g., "my_module.MyClass"),
+    dynamically imports the module and returns the object.
+
+    Args:
+        object_path (str): The path to the Python object, e.g., "my_module.MyClass".
+
+    Returns:
+        object: The Python object (e.g., a class, function, or variable).
+
+    Raises:
+        ImportError: If the module cannot be imported.
+        AttributeError: If the object cannot be found in the module.
+    """
+    try:
+        # Split the object path into module and object name
+        module_name, object_name = obj_path.rsplit('.', 1)
+        
+        # Dynamically import the module
+        module = importlib.import_module(module_name)
+        
+        # Get the object from the module
+        obj = getattr(module, object_name)
+        
+        return obj
+    except ImportError as e:
+        raise ImportError(f"Could not import module '{module_name}': {e}")
+    except AttributeError as e:
+        raise AttributeError(f"Could not find object '{object_name}' in module '{module_name}': {e}")
+
+def load_model(model_cls: torch.nn.Module, ckpt_path: str, device: str='cpu') -> Tuple[torch.nn.Module, int, float]:
     ckpt = torch.load(ckpt_path, map_location=device)
 
     with open(ckpt['hyper_parameters']['pitch_stats'], "r") as reader:
             pitch_stats = json.load(reader)
 
-    model = VQVAEMatcha(
+    if 'pre_kernel_size' not in ckpt['hyper_parameters']:
+         ckpt['hyper_parameters']['pre_kernel_size'] = ckpt['hyper_parameters']['hidden_kernel_size']
+
+    model = model_cls(
         **ckpt['hyper_parameters'],
         **pitch_stats,
     )

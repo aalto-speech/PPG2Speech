@@ -1,24 +1,25 @@
 #!/usr/bin/bash
 
 testset=$1
-ckpt=$2
-device=$3
-vocoder=$4
+model_class=$2
+ckpt=$3
+device=$4
+vocoder=$5
 
-if [ $# -lt 4 ]; then
-    echo "Usage: $0 <testset> <ckpt> <device> <vocoder> [<start> <end>]"
+if [ $# -lt 5 ]; then
+    echo "Usage: $0 <testset> <model_class> <ckpt> <device> <vocoder> [<start> <end>]"
     exit 1
 fi
 
-start="${5:-0}"
-end="${6:-5}"
+start="${6:-0}"
+end="${7:-5}"
 
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 
 if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Generating mels with flipped speaker identity"
 
-    python -m ppg_tts.evaluation.synthesis --ckpt ${ckpt} --device ${device} --data_dir ${testset} --switch_speaker
+    python -m ppg_tts.evaluation.synthesis --model_class ${model_class} --ckpt ${ckpt} --device ${device} --data_dir ${testset} --switch_speaker
 fi
 
 if [ $start -le 1 ] && [ $end -ge 1 ]; then
