@@ -18,7 +18,7 @@ def sparse_topK(nn_out: torch.Tensor, k: Optional[int]) -> torch.Tensor:
         SPPG
     """
     if k is not None:
-        assert k is int, "k should be an integer in `sparse_topk` function"
+        assert type(k) is int, f"k should be an integer in `sparse_topk` function, got {type(k)} instead"
     else:
         k = 3
     B, T, _ = nn_out.shape
@@ -42,7 +42,7 @@ def sparse_topK_percent(nn_out: torch.Tensor, k: Optional[float]) -> torch.Tenso
         SPPG
     """
     if k is not None:
-        assert k is float, "k should be an float between 0-1 in `sparse_topK_percent` function"
+        assert type(k) is float, f"k should be an float between 0-1 in `sparse_topK_percent` function, got {type(k)} instead"
     else:
         k = 0.95
     B, T, E = nn_out.shape
