@@ -7,7 +7,8 @@ class BasicDataModule(L.LightningDataModule):
     def __init__(self, 
                  data_dir: str="./data",
                  batch_size: int=16,
-                 no_ctc: bool=False):
+                 no_ctc: bool=False,
+                 ppg_sparse: str=None):
         super().__init__()
         self.data_dir = data_dir
         self.train_dir = Path(data_dir) / "train"
@@ -16,18 +17,19 @@ class BasicDataModule(L.LightningDataModule):
         self.pred_dir = "data/spk_sanity"
         self.batch_size = batch_size
         self.no_ctc = no_ctc
+        self.ppg_sparse = ppg_sparse
 
         from loguru import logger
         logger.info(f"\nTraining dir: {self.train_dir}\nVal dir: {self.val_dir}\nTest_dir: {self.test_dir}")
 
     def setup(self, stage: str):
         if stage == 'fit':
-            self.train = ExtendDataset(data_dir=self.train_dir, no_ctc=self.no_ctc)
-            self.val = ExtendDataset(data_dir=self.val_dir, no_ctc=self.no_ctc)
+            self.train = ExtendDataset(data_dir=self.train_dir, no_ctc=self.no_ctc, ppg_sparse=self.ppg_sparse)
+            self.val = ExtendDataset(data_dir=self.val_dir, no_ctc=self.no_ctc, ppg_sparse=self.ppg_sparse)
         elif stage == 'test':
-            self.test = ExtendDataset(data_dir=self.test_dir, no_ctc=self.no_ctc)
+            self.test = ExtendDataset(data_dir=self.test_dir, no_ctc=self.no_ctc, ppg_sparse=self.ppg_sparse)
         elif stage == 'predict':
-            self.predict = ExtendDataset(data_dir=self.pred_dir, no_ctc=self.no_ctc)
+            self.predict = ExtendDataset(data_dir=self.pred_dir, no_ctc=self.no_ctc, ppg_sparse=self.ppg_sparse)
 
     def train_dataloader(self):
         return DataLoader(self.train,

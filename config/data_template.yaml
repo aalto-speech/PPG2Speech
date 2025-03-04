@@ -4,3 +4,4 @@ data:
     data_dir: /scratch/elec/t412-speechsynth/DATA/fin-mix
     batch_size: 32
     no_ctc: False
+    ppg_sparse: null
