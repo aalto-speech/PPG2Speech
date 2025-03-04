@@ -1,5 +1,6 @@
 import torch
 import torchaudio
+from typing import Optional
 from loguru import logger
 from pathlib import Path
 from speechbrain.lobes.models.HifiGAN import mel_spectogram
@@ -8,7 +9,7 @@ from kaldiio import ReadHelper
 from torch.nn.functional import softmax
 
 @torch.no_grad()
-def sparse_topK(nn_out: torch.Tensor, k: int = 3) -> torch.Tensor:
+def sparse_topK(nn_out: torch.Tensor, k: Optional[int]) -> torch.Tensor:
     """
     Args:
         nn_out: un-softmax output of shape (B, T, C)
@@ -16,6 +17,10 @@ def sparse_topK(nn_out: torch.Tensor, k: int = 3) -> torch.Tensor:
     Returns:
         SPPG
     """
+    if k is not None:
+        assert k is int, "k should be an integer in `sparse_topk` function"
+    else:
+        k = 3
     B, T, _ = nn_out.shape
     prob = softmax(nn_out, dim=-1)
     topk_prob, topk_idx = prob.topk(k=k, dim=-1)
@@ -28,7 +33,7 @@ def sparse_topK(nn_out: torch.Tensor, k: int = 3) -> torch.Tensor:
     return sppg
 
 @torch.no_grad()
-def sparse_topK_percent(nn_out: torch.Tensor, k: float = 0.95) -> torch.Tensor:
+def sparse_topK_percent(nn_out: torch.Tensor, k: Optional[float]) -> torch.Tensor:
     """
     Args:
         nn_out: un-softmax output of shape (B, T, C)
@@ -36,6 +41,10 @@ def sparse_topK_percent(nn_out: torch.Tensor, k: float = 0.95) -> torch.Tensor:
     Returns:
         SPPG
     """
+    if k is not None:
+        assert k is float, "k should be an float between 0-1 in `sparse_topK_percent` function"
+    else:
+        k = 0.95
     B, T, E = nn_out.shape
 
     prob_tensor = softmax(nn_out, dim=-1)
@@ -124,7 +133,9 @@ class BaseDataset(Dataset):
         return key2feat
 
 class ExtendDataset(BaseDataset):
-    def __init__(self, data_dir: str, target_sr: int=22050, no_ctc: bool=True, ppg_sparse: str=None):
+    def __init__(self, data_dir: str, target_sr: int=22050, 
+                 no_ctc: bool=True, ppg_sparse: str=None, 
+                 sparse_coeff: Optional[int | float]=None):
         super().__init__(data_dir, target_sr)
         self.no_ctc = no_ctc
 
@@ -142,6 +153,7 @@ class ExtendDataset(BaseDataset):
         self.v_flag = self._read_scp_ark(self.v_flag)
 
         self.ppg_sparse = ppg_sparse
+        self.sparse_coeff = sparse_coeff
 
         if ppg_sparse is not None:
             match ppg_sparse:
@@ -198,7 +210,7 @@ class ExtendDataset(BaseDataset):
         ppg = torch.from_numpy(self.ppgs[key].copy())
 
         if self.ppg_sparse is not None:
-            ppg = self.sparse_func(ppg.unsqueeze(0)).squeeze(0)
+            ppg = self.sparse_func(ppg.unsqueeze(0), self.sparse_coeff).squeeze(0)
 
         return {"key": key,
                 "feature": wav,

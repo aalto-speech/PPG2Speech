@@ -5,3 +5,4 @@ data:
     batch_size: 32
     no_ctc: False
     ppg_sparse: null
+    sparse_coeff: null
