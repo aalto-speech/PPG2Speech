@@ -8,7 +8,8 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from typing import Tuple
 from ..dataset import ExtendDataset, PersoCollateFn
-from ..utils import build_parser, load_VQVAEMatcha
+from ..utils import build_parser, load_model, import_obj_from_string
+from ..models import VQVAEMatcha, PPGMatcha
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
     random_idx = random.randint(0, len(testset) - 1)
@@ -22,13 +23,15 @@ if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
 
-    logger.info(f"Load checkpoint from {args.ckpt}, device is {args.device}")
-    model, diff_steps, temperature = load_VQVAEMatcha(args.ckpt, args.device)
+    logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {args.device}")
+    model_cls = import_obj_from_string(args.model_class)
+    model, diff_steps, temperature = load_model(model_cls, args.ckpt, args.device)
 
     logger.info(f"Load testset from {args.data_dir}")
 
     testset = ExtendDataset(
         data_dir=args.data_dir,
+        no_ctc=False,
     )
 
     with open(f"{args.data_dir}/picth_median_per_speaker.json", "r") as median_reader:
@@ -65,7 +68,7 @@ if __name__ == "__main__":
         logger.info(f"generate {source_key} with speaker embedding from {target_key}")
         print(f"{source_key} {target_key}", file=speaker_mapping)
 
-        pred_mel, _, _, _ = model.synthesis(
+        pred_mel = model.synthesis(
             x=testdata['ppg'],
             x_mask=testdata['ppg_mask'],
             spk_emb=target_spk_emb.unsqueeze(0),

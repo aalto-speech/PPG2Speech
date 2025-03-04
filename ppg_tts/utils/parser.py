@@ -36,4 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
         help='whether to normalize the pitch during pitch extraction',
         action='store_true'
     )
+    parser.add_argument(
+        '--model_class',
+        help='The path to the model class',
+        type=str,
+    )
     return parser

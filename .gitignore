@@ -6,6 +6,9 @@ logs/
 exp*/
 vocoder/hifigan/ckpt/
 inspect_vocoder/
+ppg_tts/interpretate/*.png
+ppg_tts/interpretate/*.json
+ppg_tts/interpretate/*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
