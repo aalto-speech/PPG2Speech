@@ -85,6 +85,7 @@ model:
     diff_steps: 10
     temperature: 0.667
     lr_scheduler_interval: 1500
+    warmup_steps: 50000
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

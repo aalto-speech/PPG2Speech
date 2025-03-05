@@ -1,13 +1,25 @@
 import torch
-import os
-import numpy as np
+import math
 import matplotlib.pyplot as plt
-import pytorch_lightning as pl
+import numpy as np
+import os
 
-class RunTestOnFitEndCallback(pl.Callback):
-    def on_fit_end(self, trainer, pl_module):
-        trainer.test(ckpt_path='best',
-                     datamodule=trainer.datamodule)
+def WarmupCosineAnnealing(step, warmup_steps, total_steps, min_lr_factor=0.1):
+    """
+    Returns a multiplicative factor for the initial learning rate.
+    
+    - For step < warmup_steps: linear warmup from 0 to 1.
+    - For warmup_steps <= step: cosine decay from 1 to min_lr_factor.
+    """
+    if step < warmup_steps:
+        # Linear warmup: factor goes from 0 to 1.
+        return float(step) / float(warmup_steps)
+    else:
+        # Cosine annealing: compute progress from 0 to 1.
+        progress = float(step - warmup_steps) / float(total_steps - warmup_steps)
+        # Cosine annealing: at progress=0, factor=1; at progress=1, factor=min_lr_factor.
+        return min_lr_factor + 0.5 * (1.0 - min_lr_factor) * (1.0 + math.cos(math.pi * progress))
+
         
 def save_figure_to_numpy(fig):
     data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")

@@ -5,7 +5,7 @@ import lightning as L
 import torch
 import wandb
 from ...models import PPGMatcha
-from ...utils import plot_mel, plot_tensor_wandb
+from ...utils import plot_mel, plot_tensor_wandb, WarmupCosineAnnealing
 
 class PPGMatchaVC(L.LightningModule):
     def __init__(self,
@@ -35,6 +35,7 @@ class PPGMatchaVC(L.LightningModule):
                  diff_steps: int=10,
                  temperature: float=0.667,
                  lr_scheduler_interval: int = 1500,
+                 warmup_steps: int = 50000,
                  **kwargs):
         super().__init__()
 
@@ -51,6 +52,7 @@ class PPGMatchaVC(L.LightningModule):
         self.pitch_min = self.pitch_stats['pitch_min']
         self.pitch_max = self.pitch_stats['pitch_max']
         self.lr_scheduler_interval = lr_scheduler_interval
+        self.warmup_steps = warmup_steps
 
         self.model = PPGMatcha(
             ppg_dim=ppg_dim,
@@ -183,11 +185,25 @@ class PPGMatchaVC(L.LightningModule):
             lr=self.lr
         )
         
-        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=optimizer,
-            gamma=self.gamma
+        # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+        #     optimizer=optimizer,
+        #     gamma=self.gamma
+        # )
+        scheduler_func = lambda step: WarmupCosineAnnealing(
+            step=step,
+            warmup_steps=self.warmup_steps,
+            total_steps=self.trainer.max_steps,
         )
-        return [optimizer], [lr_scheduler]
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer=optimizer,
+            lr_lambda=scheduler_func,
+        )
+
+        lr_scheduler_config = {'scheduler': lr_scheduler, 'interval': 'step'}
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': lr_scheduler_config
+        }
     
     def on_fit_end(self):
         self.trainer.test(ckpt_path='best',
