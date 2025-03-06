@@ -140,7 +140,7 @@ class ExtendDataset(BaseDataset):
         self.no_ctc = no_ctc
 
         # flag = '_no_ctc' if self.no_ctc else ''
-        flag = '_nn'
+        flag = '_nn_lsm0.2'
         
         self.ppg_path = Path(data_dir, f"ppg{flag}.scp")
         self.spk_emb_path = Path(data_dir, "embedding.scp")

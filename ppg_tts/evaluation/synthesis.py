@@ -26,12 +26,22 @@ if __name__ == "__main__":
     logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {args.device}")
     model_cls = import_obj_from_string(args.model_class)
     model, diff_steps, temperature = load_model(model_cls, args.ckpt, args.device)
+    exp_dir = Path(args.ckpt).parent.parent
+
+    sparse_method, sparse_coeff = exp_dir.as_posix().split('_')[-2:]
+
+    match sparse_method:
+        case 'topk': sparse_coeff = int(sparse_coeff)
+        case 'percentage': sparse_coeff = float(sparse_coeff)
+        case _: raise ValueError(f"Failed to parse sparse method from {exp_dir}")
 
     logger.info(f"Load testset from {args.data_dir}")
 
     testset = ExtendDataset(
         data_dir=args.data_dir,
-        no_ctc=False,
+        no_ctc=True,
+        ppg_sparse=sparse_method,
+        sparse_coeff=sparse_coeff,
     )
 
     with open(f"{args.data_dir}/picth_median_per_speaker.json", "r") as median_reader:
@@ -45,7 +55,6 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    exp_dir = Path(args.ckpt).parent.parent
     if args.switch_speaker:
         mel_save_dir = exp_dir / "flip_generate_mel"
     else:
