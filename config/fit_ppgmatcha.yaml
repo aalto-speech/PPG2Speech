@@ -78,8 +78,8 @@ model:
     hidden_transformer_type: 'conformer'
     encode_transformer_type: conformer
     nhead: 4
-    hidden_kernel_size: 5
-    pre_kernel_size: 5
+    hidden_kernel_size: 9
+    pre_kernel_size: 3
     lr: 1e-4
     gamma: 0.98
     diff_steps: 10
