@@ -23,7 +23,7 @@ See `ppg_tts/evaluation/evaluate_switch_speaker.sh`
 
 #### 1. Synthesize with 1 character's prob switch to another character
 First, use alignment to select editing region:
-- [ ] greedy decoding/kaldi alignment and dtw to align with text
+- [ ] Use dtw to find alignment between ppg and text
 - [ ] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
 - [ ] Return edited text and PPG
 
