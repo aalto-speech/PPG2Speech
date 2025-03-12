@@ -1,68 +1,49 @@
-# Finnish Zero-shot Text-to-Speech (TTS) with Phonetic PosteriorGram (PPG) and Speaker-Embedding
+# PPG-based Speech Synthesis and Editing for Finnish
 
-## Idea
+## Data
+Kaldi-style dataset
+1. wav.scp
+2. ppg.scp & ppg.ark
+3. embedding.scp & embedding.ark
+4. log_f0.scp & log_f0.ark (From PENN)
+5. voiced.scp & voiced.ark (Periodicity from PENN).
+6. Optionally text
 
-### Starting Point (2024.10.27)
-+ One trained ASR model extracts PPG ($ppg_x$) from source utterance $x$.
-+ One trained Speaker-Embedding model extracts speaker embedding $emb_x$ from utterance $x$ from speaker $s$.
-+ Generate Mel-spectrum using $ppg_x$ and condition on $emb_s$. Regression on Mel-spectrum.
-+ A trained vocoder to generate wavform $y$, consistency loss between PPG ($ppg_y$) & speaker-embedding ($emb_y$) of generated speech
+## Inference
+
+## Evaluation
+
+### Copy-synthesis Evaluation
+See `ppg_tts/evaluation/evaluate_copy_synthesis.sh`
+
+### Cross-speaker Evaluation
+See `ppg_tts/evaluation/evaluate_switch_speaker.sh`
+
+### PPG Evaluation for Synthesized Speech (WIP)
+
+#### 1. Synthesize with 1 character's prob switch to another character
+First, use alignment to select editing region:
+- [ ] greedy decoding/kaldi alignment and dtw to align with text
+- [ ] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
+- [ ] Return edited text and PPG
+
+#### 2. Synthesize edited text with Matcha-TTS baseline
+Move the ONNX inference code here and use ONNX runtime
+
+#### 3. Synthesize edited PPG with the model
+
+#### 4. Evaluate Kaldi PPG/pdf-post
+
+Extract PPG/pdf-post for TTS speech and PPG-synthesized speech.
+Evaluate frame-level [Jennsen-Shannon Divergence](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html) and [Wasserstein distance](https://docs.scipy.org/doc/scipy-1.15.2/reference/generated/scipy.stats.wasserstein_distance_nd.html) in the editied region.
 
 
-## Dev Log
+## Training
+1. Prepare data as the [Data]() section
+2. Modify `config/data_template.yaml` and `config/fit_ppgmatcha.yaml` accordingly, or prepare your own config file.
+3. Run the following code:
+```
+python -m ppg_tts.main -c config/data_template.yaml -c config/fit_ppgmatcha.yaml
+```
 
-### 2024.10.26:
-PPG extract model: https://huggingface.co/GetmanY1/wav2vec2-large-fi-150k-finetuned
-
-Speaker Embedding model: https://huggingface.co/pyannote/embedding
-
-Install [pytorch-lighting](https://lightning.ai/docs/pytorch/stable/#install-lightning) and [pyannote.audio](https://github.com/pyannote/pyannote-audio) for training.
-
-### 2024.10.27
-Argparser, PPG and Speaker Embedding module done. Needs tests.
-perso_data processing scripts done.
-
-### 2024.10.30
-Add F0 and energy to features. Perso dataset with conditions finished.
-
-Refactor code.
-
-**Discuss with Lauri on the wav2vec2 ASR subsampling issue. The PPGs don't have the same length as waveform. Maybe need to train a upsampling encoder to reverse this, or learning length regulator to expand PPG length to Mel length.**
-
-## 2024.10.31
-
-Discussed with Lauri, use `torch interpolate` to deal with different sample rate between PPG and Mel-spectromgram.
-
-Finished some modules in the system.Calculate F0_min, F0_max, energy_min, enery_max from the dataset.
-
-Variation adapter need testing.
-
-Ready to build Conformer TTS model.
-
-## 2024.11.01
-
-Training, Validation, Testing loop done. Can proceed to training.
-
-## 2024.11.06
-
-- [x] Use w2v2 representations to train a model.
-- [x] Plot generated mel
-- [x] set up vocoder (starts with universal w/o fine-tuning)
-
-## 2024.11.07
-- [x] Check vocoder works correct with English
-- [x] Testing and running prediction step.
-- [x] Interating hifi-gan to this project.
-
-## 2024.11.08
-- [x] integrate [BigVGAN](https://version.aalto.fi/gitlab/liz32/bigvgan_v2_22khz_80band_fmax8k_256x)
-
-Put BigVGAN in a separate folder and soft link it back to vocoder folder.
-
-## 2024.11.12
-Add following modules for better mel:
-- [x] postnet like Tacotron 2 (https://speechbrain.readthedocs.io/en/latest/API/speechbrain.lobes.models.Tacotron2.html#speechbrain.lobes.models.Tacotron2.Postnet)
-
-## 2024.11.25
-- [x] add vctk to the dataset (Not tested)
-- [ ] add LibriTTS-R to the dataset
+## Reference
