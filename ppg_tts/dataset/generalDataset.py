@@ -134,7 +134,7 @@ class BaseDataset(Dataset):
 
 class ExtendDataset(BaseDataset):
     def __init__(self, data_dir: str, target_sr: int=22050, 
-                 no_ctc: bool=True, ppg_sparse: str=None, 
+                 no_ctc: bool=False, ppg_sparse: str=None, 
                  sparse_coeff: Optional[int | float]=None):
         super().__init__(data_dir, target_sr)
         self.no_ctc = no_ctc

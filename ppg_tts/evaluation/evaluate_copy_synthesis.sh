@@ -19,7 +19,8 @@ exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Generating mels with the same speaker identity"
 
-    python -m ppg_tts.evaluation.synthesis --model_class ${model_class} --ckpt ${ckpt} --device ${device} --data_dir ${testset}
+    python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset}
 
 fi
 
@@ -31,11 +32,13 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
         curr_dir=$(pwd)
 
         cd vocoder/bigvgan
-        python inference_e2e.py --checkpoint_file bigvgan_generator.pt --input_mels_dir ${exp_dir}/mel --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/wav_$vocoder
+        python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
+            --input_mels_dir ${exp_dir}/mel --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/wav_$vocoder
 
         cd $curr_dir
     else
-        python -m vocoder.hifigan.inference_e2e --checkpoint_file vocoder/hifigan/ckpt/g_02500000 --input_mels_dir ${exp_dir}/mel --output_dir ${exp_dir}/wav_$vocoder
+        python -m vocoder.hifigan.inference_e2e --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
+            --input_mels_dir ${exp_dir}/mel --output_dir ${exp_dir}/wav_$vocoder
     fi
 fi
 
@@ -47,4 +50,9 @@ fi
 if [ $start -le 3 ] && [ $end -ge 3 ]; then
     echo "Evaluate MOS score on the synthesized speech"
     python -m ppg_tts.evaluation.mos_eval --flip_wav_dir ${exp_dir}/wav_$vocoder
+fi
+
+if [ $start -le 4 ] && [ $end -ge 4 ]; then
+    echo "Evaluate pitch dtw and mcd on the synthesized speech"
+    python -m ppg_tts.evaluation.evaluate_pitch_mcd --data_dir ${testset} --flip_wav_dir ${exp_dir}/wav_$vocoder
 fi
