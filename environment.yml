@@ -209,6 +209,7 @@ dependencies:
       - docstring-parser==0.16
       - docstring-parser-fork==0.0.9
       - einops==0.8.0
+      - fastdtw==0.3.4
       - flake8==7.0.0
       - flatbuffers==24.3.25
       - fonttools==4.54.1
@@ -295,12 +296,15 @@ dependencies:
       - pyflakes==3.2.0
       - pygments==2.18.0
       - pygtrie==2.5.0
+      - pymcd==0.2.1
       - pynndescent==0.5.13
       - pyparsing==3.2.0
+      - pysptk==1.0.1
       - pytest==7.4.0
       - python-dotenv==1.0.1
       - pytorch-lightning==2.4.0
       - pytorch-metric-learning==2.6.0
+      - pyworld==0.3.5
       - rdkit==2024.3.6
       - requests-oauthlib==2.0.0
       - rich==13.9.3
