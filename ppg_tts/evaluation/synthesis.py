@@ -53,10 +53,12 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
+    dirname = os.path.dirname(args.data_dir)
+
     if args.switch_speaker:
-        mel_save_dir = exp_dir / "flip_generate_mel"
+        mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
     else:
-        mel_save_dir = exp_dir / "mel"
+        mel_save_dir = exp_dir / f"mel_{dirname}"
 
     os.makedirs(mel_save_dir, exist_ok=True)
 
