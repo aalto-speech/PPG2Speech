@@ -26,26 +26,24 @@ if __name__ == "__main__":
     logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {args.device}")
     model_cls = import_obj_from_string(args.model_class)
     model, diff_steps, temperature = load_model(model_cls, args.ckpt, args.device)
+    model = model.to(args.device)
     exp_dir = Path(args.ckpt).parent.parent
 
-    sparse_method, sparse_coeff = exp_dir.as_posix().split('_')[-2:]
+    # sparse_method, sparse_coeff = exp_dir.as_posix().split('_')[-2:]
 
-    match sparse_method:
-        case 'topk': sparse_coeff = int(sparse_coeff)
-        case 'percentage': sparse_coeff = float(sparse_coeff)
-        case _: raise ValueError(f"Failed to parse sparse method from {exp_dir}")
+    # match sparse_method:
+    #     case 'topk': sparse_coeff = int(sparse_coeff)
+    #     case 'percentage': sparse_coeff = float(sparse_coeff)
+    #     case _: raise ValueError(f"Failed to parse sparse method from {exp_dir}")
 
     logger.info(f"Load testset from {args.data_dir}")
 
     testset = ExtendDataset(
         data_dir=args.data_dir,
-        no_ctc=True,
-        ppg_sparse=sparse_method,
-        sparse_coeff=sparse_coeff,
+        no_ctc=False,
+        # ppg_sparse=sparse_method,
+        # sparse_coeff=sparse_coeff,
     )
-
-    with open(f"{args.data_dir}/picth_median_per_speaker.json", "r") as median_reader:
-        speaker_median = json.load(median_reader)
 
     testloader = DataLoader(
         dataset=testset,
@@ -64,33 +62,32 @@ if __name__ == "__main__":
 
     speaker_mapping = open(mel_save_dir / "speaker_mapping", "w")
 
-    model.eval()
+    with torch.inference_mode():
+        for i, testdata in enumerate(testloader):
+            # Inference mel spectrogram
+            source_key = testdata['keys'][0]
+            if args.switch_speaker:
+                target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
+            else:
+                target_key, target_spk_emb = source_key, testdata['spk_emb'].squeeze(0)
+            target_pitch = testdata['log_F0']
+            logger.info(f"generate {source_key} with speaker embedding from {target_key}")
+            print(f"{source_key} {target_key}", file=speaker_mapping)
 
-    for i, testdata in enumerate(testloader):
-        # Inference mel spectrogram
-        source_key = testdata['keys'][0]
-        if args.switch_speaker:
-            target_key, target_spk_emb = replace_spk_emb(testset=testset, curr_idx=i)
-        else:
-            target_key, target_spk_emb = source_key, testdata['spk_emb'].squeeze(0)
-        target_pitch = testdata['log_F0']
-        logger.info(f"generate {source_key} with speaker embedding from {target_key}")
-        print(f"{source_key} {target_key}", file=speaker_mapping)
+            pred_mel = model.synthesis(
+                x=testdata['ppg'].to(args.device),
+                x_mask=testdata['ppg_mask'].to(args.device),
+                spk_emb=target_spk_emb.unsqueeze(0).to(args.device),
+                pitch_target=target_pitch.to(args.device),
+                v_flag=testdata['v_flag'].to(args.device),
+                mel_mask=testdata['mel_mask'].to(args.device),
+                diff_steps=diff_steps,
+                temperature=temperature,
+            )
 
-        pred_mel = model.synthesis(
-            x=testdata['ppg'],
-            x_mask=testdata['ppg_mask'],
-            spk_emb=target_spk_emb.unsqueeze(0),
-            pitch_target=target_pitch,
-            v_flag=testdata['v_flag'],
-            mel_mask=testdata['mel_mask'],
-            diff_steps=diff_steps,
-            temperature=temperature,
-        )
+            saved_mel = pred_mel.transpose(1,2).cpu().numpy()
 
-        saved_mel = pred_mel.transpose(1,2).detach().cpu().numpy()
-
-        # Save mel spectrogram
-        np.save(f"{mel_save_dir}/{source_key}", saved_mel)
+            # Save mel spectrogram
+            np.save(f"{mel_save_dir}/{source_key}", saved_mel)
 
     speaker_mapping.close()

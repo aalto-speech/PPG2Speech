@@ -1,6 +1,7 @@
 import os
 import torch
 import torchaudio
+import utmosv2
 from torchmetrics.functional.audio.dnsmos \
     import deep_noise_suppression_mean_opinion_score
 from loguru import logger
@@ -31,22 +32,38 @@ if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
 
-    average_score = torch.zeros((4,))
-    num_audio  = 0
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+    # ut_model = utmosv2.create_model(
+    #     pretrained=True,
+    #     fold=3,
+    # )
+
+    # mos = ut_model.predict(
+    #     input_dir=args.flip_wav_dir,
+    #     num_repetitions=5,
+    #     device=device,
+    # )
+
+    # logger.info(f"UTMOS score is {mos}")
+
+    average_score = torch.zeros((4,), device='cpu')
+    num_audio = 0
 
     # for wav, sr, key in read_wav_scp('/scratch/work/liz32/ppg_tts/data/spk_sanity/wav.scp'):
     for wav, sr, key in read_wav(args.flip_wav_dir):
         score = deep_noise_suppression_mean_opinion_score(
-            preds=wav,
+            preds=wav.to('cpu'),
             fs=sr,
             personalized=False,
             num_threads=8,
+            device='cpu',
         )
 
         logger.info(
             f'{key}: p808_mos {score[0][0]}, mos_sig {score[0][1]}, '
             f'mos_bak {score[0][2]}, mos_ovr {score[0][3]}')
-        average_score = average_score + score.squeeze()
+        average_score += score.squeeze()
         num_audio += 1
     
     average_score /= num_audio
@@ -54,3 +71,5 @@ if __name__ == "__main__":
     logger.info(f'The average scores: p808_mos {average_score[0]}, '
                 f'mos_sig {average_score[1]}, mos_bak {average_score[2]}, '
                 f'mos_ovr {average_score[3]}')
+    
+

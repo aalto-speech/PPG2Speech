@@ -46,5 +46,5 @@ fi
 
 if [ $start -le 3 ] && [ $end -ge 3 ]; then
     echo "Evaluate MOS score on the synthesized speech"
-    python -m ppg_tts.evaluation.dnsmos_eval --flip_wav_dir ${exp_dir}/wav_$vocoder
+    python -m ppg_tts.evaluation.mos_eval --flip_wav_dir ${exp_dir}/wav_$vocoder
 fi

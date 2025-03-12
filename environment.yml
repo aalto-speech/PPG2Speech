@@ -341,6 +341,7 @@ dependencies:
       - typer==0.12.5
       - typeshed-client==2.7.0
       - umap-learn==0.5.6
+      - utmosv2==1.1.0
       - virtualenv==20.28.0
       - wandb==0.19.1
       - werkzeug==3.1.3

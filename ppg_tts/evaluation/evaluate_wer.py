@@ -2,8 +2,8 @@ import torch
 import torchaudio
 import os
 from ..utils import build_parser, remove_punc_and_tolower
-from ..models import PPGFromWav2Vec2Pretrained
 from loguru import logger
+from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 from torchmetrics.functional.text import word_error_rate, char_error_rate
 
 def read_wav_scp_text(scp: str, text: str):
@@ -58,27 +58,32 @@ if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
 
-    ASRModel = PPGFromWav2Vec2Pretrained(args.asr_pretrained)
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+    processor = Wav2Vec2Processor.from_pretrained(args.asr_pretrained)
+    model = Wav2Vec2ForCTC.from_pretrained(args.asr_pretrained)
+    model = model.to(device)
 
     logger.info(f"Evaluating WER on {args.flip_wav_dir}, transcripts in {args.data_dir}/text.")
 
     ref = []
     pred = []
 
-    # for utterance in read_wav_scp_text('/scratch/work/liz32/ppg_tts/data/spk_sanity/wav.scp',
-    #                                    '/scratch/work/liz32/ppg_tts/data/spk_sanity/text'):
-    for utterance in read_wav_text(args.flip_wav_dir, f"{args.data_dir}/text"):
-        wav = utterance[0]
-        text = utterance[1]
-        ref.append(text)
-        ppg = ASRModel.forward(wav)
+    with torch.inference_mode():
+        # for utterance in read_wav_scp_text('/scratch/work/liz32/ppg_tts/data/spk_sanity/wav.scp',
+        #                                    '/scratch/work/liz32/ppg_tts/data/spk_sanity/text'):
+        for utterance in read_wav_text(args.flip_wav_dir, f"{args.data_dir}/text"):
+            wav = utterance[0].to(device)
+            text = utterance[1]
+            ref.append(text)
+            logits = model.forward(wav).logits
 
-        predicted_ids = torch.argmax(ppg, dim=-1)
-        predicted_trans = ASRModel.processor.batch_decode(predicted_ids)[0].lower()
+            predicted_ids = torch.argmax(logits, dim=-1)
+            predicted_trans = processor.batch_decode(predicted_ids)[0].lower()
 
-        pred.append(predicted_trans)
+            pred.append(predicted_trans)
 
-        logger.info(f"{utterance[-1]}:\nref: {text}\nhyp: {predicted_trans}\n")
+            logger.info(f"{utterance[-1]}:\nref: {text}\nhyp: {predicted_trans}\n")
     
     wer = word_error_rate(pred, ref)
 
