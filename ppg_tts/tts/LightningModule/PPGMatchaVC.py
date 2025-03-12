@@ -4,7 +4,7 @@ import json
 import lightning as L
 import torch
 import wandb
-from ...models import PPGMatcha
+from ...models import PPGMatcha, PPGMatchaV2
 from ...utils import plot_mel, plot_tensor_wandb, WarmupCosineAnnealing
 
 class PPGMatchaVC(L.LightningModule):
