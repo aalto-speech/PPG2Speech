@@ -54,7 +54,7 @@ class PPGMatchaVC(L.LightningModule):
         self.lr_scheduler_interval = lr_scheduler_interval
         self.warmup_steps = warmup_steps
 
-        self.model = PPGMatcha(
+        self.model = PPGMatchaV2(
             ppg_dim=ppg_dim,
             encode_dim=encode_dim,
             spk_emb_size=spk_emb_size,
