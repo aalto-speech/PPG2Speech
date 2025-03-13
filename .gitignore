@@ -9,6 +9,7 @@ inspect_vocoder/
 *.png
 ppg_tts/interpretate/*.json
 ppg_tts/interpretate/*.txt
+*.onnx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

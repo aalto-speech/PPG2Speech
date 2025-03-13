@@ -28,7 +28,7 @@ First, use alignment to select editing region:
 - [x] Return edited text and PPG
 
 #### 2. Synthesize edited text with Matcha-TTS baseline
-Move the ONNX inference code here and use ONNX runtime
+- [x] Move the ONNX inference code here and use ONNX runtime
 
 #### 3. Synthesize edited PPG with the model
 
