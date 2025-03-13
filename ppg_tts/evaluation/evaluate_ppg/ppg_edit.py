@@ -82,7 +82,7 @@ class PPGEditor:
         
         return "".join(reconstruct)
     
-    def edit_ppg(self, ppg: np.ndarray, text: str) -> torch.Tensor:
+    def edit_ppg(self, ppg: np.ndarray, text: str) -> Tuple[np.ndarray, str]:
         """
         This function randomly select a frame range and an index.
         Move the dominate probability to the new index
@@ -106,10 +106,8 @@ class PPGEditor:
 
         alignments = self._dtw_align(hyp, text_seq)
 
-        print(alignments)
-
         candidates = [key for key in alignments \
-                      if key >= OFFSET and 3 <= text_seq[key - OFFSET] <= 31
+                      if key >= OFFSET and 3 <= text_seq[key] <= 31
                      ]
 
         src_char_idx = random.choice(candidates)
@@ -120,14 +118,10 @@ class PPGEditor:
 
         src_char_start, src_char_end = alignments[src_char_idx][0]
 
-        print(f"Replace letter {self.i2c[src_char]}({src_char}) at {src_char_idx} to letter {self.i2c[replace]}({replace}), range {src_char_start}-{src_char_end}")
-
         text_seq[src_char_idx - OFFSET] = replace
 
         new_ppg = ppg.copy()
         new_ppg.setflags(write=True)
-
-        print(ppg[src_char_start:src_char_end+1, src_char])
 
         new_ppg[src_char_start:src_char_end+1, replace] = ppg[src_char_start:src_char_end+1, src_char]
         new_ppg[src_char_start:src_char_end+1, src_char] = 0.0

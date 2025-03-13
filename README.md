@@ -31,6 +31,7 @@ First, use alignment to select editing region:
 - [x] Move the ONNX inference code here and use ONNX runtime
 
 #### 3. Synthesize edited PPG with the model
+- [x] Add editing ppg option and editor to `ppg_tts/evaluation/synthesis.py`
 
 #### 4. Evaluate Kaldi PPG/pdf-post
 

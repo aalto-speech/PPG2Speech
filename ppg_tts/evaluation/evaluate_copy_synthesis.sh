@@ -21,7 +21,7 @@ if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Generating mels with the same speaker identity"
 
     python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
-        --ckpt ${ckpt} --device ${device} --data_dir ${testset}
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg
 
 fi
 
@@ -59,7 +59,7 @@ if [ $start -le 4 ] && [ $end -ge 4 ]; then
     python -m ppg_tts.evaluation.evaluate_pitch_mcd --data_dir ${testset} --flip_wav_dir ${exp_dir}/wav_${test_dir}_$vocoder
 fi
 
-if [[ "$test_dir" == *"unseen"* ]]; then
+if [ $start -le 5 ] && [ $end -ge 5 ] && [ "$test_dir" == *"unseen"* ]; then
     python -m ppg_tts.evaluation.evaluate_spk_emb --data_dir ${testset} \
         --flip_wav_dir ${exp_dir}/wav_${test_dir}_$vocoder --device ${device}
 fi

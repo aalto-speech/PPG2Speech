@@ -1,15 +1,48 @@
+import argparse
 import os
 import torch
 import random
-import json
 import numpy as np
+from kaldiio import WriteHelper
 from loguru import logger
 from pathlib import Path
 from torch.utils.data import DataLoader
 from typing import Tuple
 from ..dataset import ExtendDataset, PersoCollateFn
-from ..utils import build_parser, load_model, import_obj_from_string
-from ..models import VQVAEMatcha, PPGMatcha
+from .evaluate_ppg.ppg_edit import PPGEditor
+from ..utils import load_model, import_obj_from_string
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Argument parser for synthesis.")
+    parser.add_argument("--data_dir", 
+                        help="The data directory for Dataset. Should contains wav.scp and text for Perso. Download location for VCTK.",
+                        default="./data")
+    parser.add_argument("--device",
+                        help="CPU/CUDA device to run",
+                        default="cpu")
+    parser.add_argument("--ckpt",
+                        help="ckpt path for the TTS/VC model.")
+    parser.add_argument('--switch_speaker',
+                        help='whether to switch the speaker embedding during inference',
+                        action='store_true')
+    parser.add_argument(
+        '--model_class',
+        help='The path to the model class',
+        type=str,
+    )
+    parser.add_argument(
+        '--edit_ppg',
+        action='store_true',
+        default=False,
+    )
+
+    parser.add_argument(
+        '--phonemes',
+        type=str,
+        default='data/spk_sanity/phones.txt'
+    )
+
+    return parser
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
     random_idx = random.randint(0, len(testset) - 1)
@@ -22,6 +55,9 @@ def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.T
 if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.edit_ppg and args.switch_speaker:
+        raise ValueError("Can't synthesize with edited ppg while switch speaker identity")
 
     logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {args.device}")
     model_cls = import_obj_from_string(args.model_class)
@@ -64,6 +100,12 @@ if __name__ == "__main__":
 
     speaker_mapping = open(mel_save_dir / "speaker_mapping", "w")
 
+    if args.edit_ppg:
+        os.makedirs(f"{mel_save_dir.as_posix()}/editing", exist_ok=True)
+        editor = PPGEditor(args.phonemes)
+        ppg_writer = WriteHelper(f'ark,scp:{mel_save_dir.as_posix()}/editing/ppg.ark,{mel_save_dir.as_posix()}/editing/ppg.scp')
+        text_writer = open(f"{mel_save_dir.as_posix()}/editing/text", 'w', encoding='utf-8')
+
     with torch.inference_mode():
         for i, testdata in enumerate(testloader):
             # Inference mel spectrogram
@@ -73,11 +115,26 @@ if __name__ == "__main__":
             else:
                 target_key, target_spk_emb = source_key, testdata['spk_emb'].squeeze(0)
             target_pitch = testdata['log_F0']
-            logger.info(f"generate {source_key} with speaker embedding from {target_key}")
+            logger.info(f"Synthesize {source_key} with speaker embedding from {target_key}")
             print(f"{source_key} {target_key}", file=speaker_mapping)
 
+            if args.edit_ppg:
+                text = testset[i]['text']
+                new_ppg, new_text = editor.edit_ppg(
+                    testdata['ppg'].squeeze(0).numpy(), text=text
+                )
+
+                ppg_writer(source_key, new_ppg)
+                text_writer.write(f"{source_key} {new_text}\n")
+
+                logger.info(f"Editing {source_key}: [{text}] -> [{new_text}]")
+
+                ppg = torch.from_numpy(new_ppg).unsqueeze(0)
+            else:
+                ppg = testdata['ppg'].to(args.device)
+
             pred_mel = model.synthesis(
-                x=testdata['ppg'].to(args.device),
+                x=ppg.to(args.device),
                 x_mask=testdata['ppg_mask'].to(args.device),
                 spk_emb=target_spk_emb.unsqueeze(0).to(args.device),
                 pitch_target=target_pitch.to(args.device),
@@ -93,3 +150,7 @@ if __name__ == "__main__":
             np.save(f"{mel_save_dir}/{source_key}", saved_mel)
 
     speaker_mapping.close()
+
+    if args.edit_ppg:
+        ppg_writer.close()
+        text_writer.close()
