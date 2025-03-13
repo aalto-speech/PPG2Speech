@@ -1,5 +1,6 @@
 import torch
 import torchaudio
+import re
 from typing import Optional
 from loguru import logger
 from pathlib import Path
@@ -96,7 +97,7 @@ class BaseDataset(Dataset):
             self.idx2key[i] = key
             self.key2idx[key] = i
 
-        with open(f"{data_dir}/text", "r") as reader:
+        with open(f"{data_dir}/text", "r", encoding='utf-8') as reader:
             textlist = reader.readlines()
 
         self.key2text = {}
@@ -122,7 +123,11 @@ class BaseDataset(Dataset):
                                              orig_freq=sr,
                                              new_freq=self.target_sr)
         
-        return key, wav, sr, self.key2text[key]
+        return key, wav, sr, self._remove_punctuation(self.key2text[key])
+    
+    def _remove_punctuation(self, text: str) -> str:
+        """Removes punctuation from the given Finnish text."""
+        return re.sub(r"[^\w\säöÄÖ]", "", text).lower()
     
     def _read_scp_ark(self, scp_path: Path):
         key2feat = {}
@@ -214,7 +219,7 @@ class ExtendDataset(BaseDataset):
 
         return {"key": key,
                 "feature": wav,
-                "text": None,
+                "text": self._remove_punctuation(self.key2text[key]),
                 "melspectrogram": mel.squeeze(),
                 "ppg": ppg,
                 "spk_emb": torch.from_numpy(self.spk_embs[key].copy()),

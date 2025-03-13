@@ -6,7 +6,7 @@ logs/
 exp*/
 vocoder/hifigan/ckpt/
 inspect_vocoder/
-ppg_tts/interpretate/*.png
+*.png
 ppg_tts/interpretate/*.json
 ppg_tts/interpretate/*.txt
 

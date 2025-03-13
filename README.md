@@ -23,9 +23,9 @@ See `ppg_tts/evaluation/evaluate_switch_speaker.sh`
 
 #### 1. Synthesize with 1 character's prob switch to another character
 First, use alignment to select editing region:
-- [ ] Use dtw to find alignment between ppg and text
-- [ ] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
-- [ ] Return edited text and PPG
+- [x] Use dtw to find alignment between ppg and text
+- [x] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
+- [x] Return edited text and PPG
 
 #### 2. Synthesize edited text with Matcha-TTS baseline
 Move the ONNX inference code here and use ONNX runtime

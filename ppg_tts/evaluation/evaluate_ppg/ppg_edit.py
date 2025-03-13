@@ -1,7 +1,7 @@
 import fastdtw
 import torch
 import numpy as np
-import re
+import random
 from collections import defaultdict
 from typing import Tuple, List, Dict
 
@@ -44,44 +44,118 @@ class PPGEditor:
 
         return ranges
     
-    def _dtw_align(self, ppg_hyp: np.ndarray, text_seq: List[str]):
+    def _dtw_align(self, ppg_hyp: np.ndarray, text_seq: List[str]) -> defaultdict:
         """
         Compute Alignment betwenn PPG hypothesis with text_seq
         Args:
             ppg_hyp: shape (T,)
             text_seq: List[str] of length L
         """
-        return fastdtw.fastdtw(ppg_hyp, text_seq, self.dist_func)
+        _, path = fastdtw.fastdtw(ppg_hyp, text_seq, 10, self.dist_func)
 
-    def _remove_punctuation(self, text: str) -> str:
-        """Removes punctuation from the given Finnish text."""
-        return re.sub(r"[^\w\säöÄÖ]", "", text).lower()
+        alignment_dict = defaultdict(list)
+        start = None
+        prev_seq2 = None
+        
+        for seq1, seq2 in path:
+            if prev_seq2 is None or seq2 != prev_seq2:
+                if prev_seq2 is not None:
+                    alignment_dict[prev_seq2].append((start, seq1))
+                start = seq1
+            prev_seq2 = seq2
+        
+        if prev_seq2 is not None:
+            alignment_dict[prev_seq2].append((start, seq1 + 1))
+
+        return alignment_dict
     
-    def edit_ppg(self, ppg: np.ndarray, ali_seq: List[int], text: str) -> torch.Tensor:
+    def _rebuild_text_with_replace(self, orig_text: str, new_text_seq: List[str], offset: int) -> str:
+        reconstruct = []
+        curr = 0
+
+        for c in orig_text:
+            if c in ' \n':
+                reconstruct.append(c)
+            else:
+                reconstruct.append(self.i2c[new_text_seq[curr + offset]])
+                curr += 1
+        
+        return "".join(reconstruct)
+    
+    def edit_ppg(self, ppg: np.ndarray, text: str) -> torch.Tensor:
         """
         This function randomly select a frame range and an index.
         Move the dominate probability to the new index
         Args: 
             ppg: torch.Tensor of shape (T, C)
-            ali_seq: List of int, alignment from Kaldi model
             text: the reference text
         Returns:
             edited ppg
         """
         hyp = ppg.argmax(axis=-1)
-        text_seq = self._remove_punctuation(text)
+        text_seq = [self.c2i[char] for char in text if char not in ' \n']
+        OFFSET = 0
 
-        _, path = self._dtw_align(hyp, text_seq)
+        # Add optional silence based on the hypothesis
+        if hyp[0] == 1:
+            text_seq.insert(0, 1)
+            OFFSET = 1
+        
+        if hyp[-1] == 1:
+            text_seq.append(1)
 
-        print(path)
+        alignments = self._dtw_align(hyp, text_seq)
+
+        print(alignments)
+
+        candidates = [key for key in alignments \
+                      if key >= OFFSET and 3 <= text_seq[key - OFFSET] <= 31
+                     ]
+
+        src_char_idx = random.choice(candidates)
+        src_char = text_seq[src_char_idx]
+    
+        # Randomly select another distinct number from the full range 3-31
+        replace = random.choice([x for x in range(3, 32) if x != text_seq[src_char_idx]])
+
+        src_char_start, src_char_end = alignments[src_char_idx][0]
+
+        print(f"Replace letter {self.i2c[src_char]}({src_char}) at {src_char_idx} to letter {self.i2c[replace]}({replace}), range {src_char_start}-{src_char_end}")
+
+        text_seq[src_char_idx - OFFSET] = replace
+
+        new_ppg = ppg.copy()
+        new_ppg.setflags(write=True)
+
+        print(ppg[src_char_start:src_char_end+1, src_char])
+
+        new_ppg[src_char_start:src_char_end+1, replace] = ppg[src_char_start:src_char_end+1, src_char]
+        new_ppg[src_char_start:src_char_end+1, src_char] = 0.0
+
+        return new_ppg, self._rebuild_text_with_replace(text, text_seq, OFFSET)
 
 if __name__ == '__main__':
-    sequence = [1, 1, 1, 1, 1, 1, 1, 1, 1, 17, 17, 17, 17, 17, 17, 10, 10, 10, 10, 
-                12, 12, 12, 7, 7, 7, 7, 16, 21, 11, 11, 11, 14, 14, 14, 29, 29, 
-                13, 13, 29, 29, 29, 29, 16, 16, 17, 14, 14, 14, 14, 23, 23, 22, 
-                22, 22, 3, 3, 3, 21, 21, 11, 11, 11, 11, 3, 3, 3, 3, 3, 3, 1, 1, 
-                1, 1, 1, 1, 1]
+    from kaldiio import load_scp
+    from ...interpretate.ppg_visualization import visualize_multiple_ppg
+
+    d = load_scp('data/spk_sanity/ppg.scp')
+
+    editor = PPGEditor('data/spk_sanity/phones.txt')
+
+    ppg = d['01_test_0014']
+
+    text = "oluiden myynti laski hieman"
+
+    new_ppg, new_text = editor.edit_ppg(ppg, text)
+
+    visualize_multiple_ppg(
+        [ppg[:, :32], new_ppg[:, :32]],
+        ['origin', 'edited'],
+        save_path='ppg_tts/evaluation/evaluate_ppg/test.png',
+        y_labels_map=editor.i2c,
+    )
+
+    print(text)
+    print(new_text)
     
-    processer = PPGEditor('data/spk_sanity/phones.txt')
-    ranges_dict = processer.IdxSeq2Range(sequence)
-    print(ranges_dict)    
+
