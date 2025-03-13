@@ -15,7 +15,7 @@ start="${6:-0}"
 end="${7:-5}"
 
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
-test_dir=$(dirname ${testset})
+test_dir=$(basename ${testset})
 
 
 if [ $start -le 0 ] && [ $end -ge 0 ]; then

@@ -15,7 +15,7 @@ start="${6:-0}"
 end="${7:-5}"
 
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
-test_dir=$(dirname ${testset})
+test_dir=$(basename ${testset})
 
 if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Generating mels with the same speaker identity"
@@ -41,6 +41,7 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
         python -m vocoder.hifigan.inference_e2e --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
             --input_mels_dir ${exp_dir}/mel_${test_dir} --output_dir ${exp_dir}/wav_${test_dir}_$vocoder
     fi
+    cp ${exp_dir}/mel_${test_dir}/speaker_mapping ${exp_dir}/wav_${test_dir}_$vocoder/speaker_mapping
 fi
 
 if [ $start -le 2 ] && [ $end -ge 2 ]; then
@@ -56,4 +57,9 @@ fi
 if [ $start -le 4 ] && [ $end -ge 4 ]; then
     echo "Evaluate pitch dtw and mcd on the synthesized speech"
     python -m ppg_tts.evaluation.evaluate_pitch_mcd --data_dir ${testset} --flip_wav_dir ${exp_dir}/wav_${test_dir}_$vocoder
+fi
+
+if [[ "$test_dir" == *"unseen"* ]]; then
+    python -m ppg_tts.evaluation.evaluate_spk_emb --data_dir ${testset} \
+        --flip_wav_dir ${exp_dir}/wav_${test_dir}_$vocoder --device ${device}
 fi

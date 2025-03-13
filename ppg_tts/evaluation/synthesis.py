@@ -53,7 +53,7 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    dirname = os.path.dirname(args.data_dir)
+    dirname = os.path.basename(args.data_dir)
 
     if args.switch_speaker:
         mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
