@@ -49,6 +49,11 @@ if __name__ == "__main__":
 
     dataset = ExtendDataset(data_dir=args.data_dir)
     mcd_cal = pymcd.Calculate_MCD('dtw_sl')
+
+    logger.add(
+        f"{args.flip_wav_dir}/logs/pitch_mcd.log",
+        rotation='200 MB'
+    )
     
     avg_pitch_mae = 0.0
     average_mcd = 0.0

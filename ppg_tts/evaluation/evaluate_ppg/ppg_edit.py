@@ -82,7 +82,7 @@ class PPGEditor:
         
         return "".join(reconstruct)
     
-    def edit_ppg(self, ppg: np.ndarray, text: str) -> Tuple[np.ndarray, str]:
+    def edit_ppg(self, ppg: np.ndarray, text: str) -> Tuple[np.ndarray, str, Tuple]:
         """
         This function randomly select a frame range and an index.
         Move the dominate probability to the new index
@@ -126,7 +126,7 @@ class PPGEditor:
         new_ppg[src_char_start:src_char_end+1, replace] = ppg[src_char_start:src_char_end+1, src_char]
         new_ppg[src_char_start:src_char_end+1, src_char] = 0.0
 
-        return new_ppg, self._rebuild_text_with_replace(text, text_seq, OFFSET)
+        return new_ppg, self._rebuild_text_with_replace(text, text_seq, OFFSET), alignments[src_char_idx][0]
 
 if __name__ == '__main__':
     from kaldiio import load_scp

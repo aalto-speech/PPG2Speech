@@ -58,6 +58,16 @@ if __name__ == "__main__":
 
     if args.edit_ppg and args.switch_speaker:
         raise ValueError("Can't synthesize with edited ppg while switch speaker identity")
+    
+    exp_dir = Path(args.ckpt).parent.parent
+    dirname = os.path.basename(args.data_dir)
+    
+    if args.switch_speaker:
+        mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
+    else:
+        mel_save_dir = exp_dir / f"mel_{dirname}"
+
+    logger.add(f"{mel_save_dir}/synthesis.log", rotation='200 MB')
 
     logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {args.device}")
     model_cls = import_obj_from_string(args.model_class)
@@ -89,13 +99,6 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    dirname = os.path.basename(args.data_dir)
-
-    if args.switch_speaker:
-        mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
-    else:
-        mel_save_dir = exp_dir / f"mel_{dirname}"
-
     os.makedirs(mel_save_dir, exist_ok=True)
 
     speaker_mapping = open(mel_save_dir / "speaker_mapping", "w")
@@ -120,14 +123,14 @@ if __name__ == "__main__":
 
             if args.edit_ppg:
                 text = testset[i]['text']
-                new_ppg, new_text = editor.edit_ppg(
+                new_ppg, new_text, range = editor.edit_ppg(
                     testdata['ppg'].squeeze(0).numpy(), text=text
                 )
 
                 ppg_writer(source_key, new_ppg)
                 text_writer.write(f"{source_key} {new_text}\n")
 
-                logger.info(f"Editing {source_key}: [{text}] -> [{new_text}]")
+                logger.info(f"Editing {source_key}: [{text}] -> [{new_text}], frame range {range}")
 
                 ppg = torch.from_numpy(new_ppg).unsqueeze(0)
             else:

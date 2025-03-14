@@ -28,13 +28,16 @@ fi
 if [ $start -le 1 ] && [ $end -ge 1 ]; then
     echo "Generating wavs for generated mels"
 
+    mkdir -p ${exp_dir[$SLURM_ARRAY_TASK_ID]}/wav_${test_dir}_$vocoder/log
+
     if [[ $vocoder == "bigvgan" ]]; then
 
         curr_dir=$(pwd)
 
         cd vocoder/bigvgan
         python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
-            --input_mels_dir ${exp_dir}/mel_${test_dir} --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/wav_${test_dir}_$vocoder
+            --input_mels_dir ${exp_dir}/mel_${test_dir} \
+            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/wav_${test_dir}_$vocoder
 
         cd $curr_dir
     else

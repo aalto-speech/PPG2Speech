@@ -12,6 +12,11 @@ if __name__ == "__main__":
     dataset = ExtendDataset(data_dir=args.data_dir)
     SpEmModel = wespeaker.load_model('vblinkf')
 
+    logger.add(
+        f"{args.flip_wav_dir}/logs/SpkSim.log",
+        rotation='200 MB'
+    )
+
     with open(f"{args.flip_wav_dir}/speaker_mapping", "r") as reader:
         mapping = reader.readlines()
     

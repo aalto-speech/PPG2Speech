@@ -64,6 +64,11 @@ if __name__ == "__main__":
     model = Wav2Vec2ForCTC.from_pretrained(args.asr_pretrained)
     model = model.to(device)
 
+    logger.add(
+        f"{args.flip_wav_dir}/logs/wer_cer.log",
+        rotation='200 MB'
+    )
+
     logger.info(f"Evaluating WER on {args.flip_wav_dir}, transcripts in {args.data_dir}/text.")
 
     ref = []
