@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import torch
 import random
@@ -64,6 +65,8 @@ if __name__ == "__main__":
     
     if args.switch_speaker:
         mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
+    elif args.edit_ppg:
+        mel_save_dir = exp_dir / f"edit_mel_{dirname}"
     else:
         mel_save_dir = exp_dir / f"mel_{dirname}"
 
@@ -108,6 +111,7 @@ if __name__ == "__main__":
         editor = PPGEditor(args.phonemes)
         ppg_writer = WriteHelper(f'ark,scp:{mel_save_dir.as_posix()}/editing/ppg.ark,{mel_save_dir.as_posix()}/editing/ppg.scp')
         text_writer = open(f"{mel_save_dir.as_posix()}/editing/text", 'w', encoding='utf-8')
+        edits_json = {}
 
     with torch.inference_mode():
         for i, testdata in enumerate(testloader):
@@ -123,14 +127,20 @@ if __name__ == "__main__":
 
             if args.edit_ppg:
                 text = testset[i]['text']
-                new_ppg, new_text, range = editor.edit_ppg(
+                new_ppg, new_text, region = editor.edit_ppg(
                     testdata['ppg'].squeeze(0).numpy(), text=text
                 )
 
                 ppg_writer(source_key, new_ppg)
                 text_writer.write(f"{source_key} {new_text}\n")
 
-                logger.info(f"Editing {source_key}: [{text}] -> [{new_text}], frame range {range}")
+                logger.info(f"Editing {source_key}: [{text}] -> [{new_text}], frame range {region}")
+
+                edits_json[source_key] = {
+                    'origin_text': text,
+                    'new_text': new_text,
+                    'edit_region': region,
+                }
 
                 ppg = torch.from_numpy(new_ppg).unsqueeze(0)
             else:
@@ -157,3 +167,10 @@ if __name__ == "__main__":
     if args.edit_ppg:
         ppg_writer.close()
         text_writer.close()
+
+        with open(f"{mel_save_dir.as_posix()}/editing/edits.json", 'w') as writer:
+            json.dump(
+                edits_json,
+                writer,
+                indent=4,
+            )
