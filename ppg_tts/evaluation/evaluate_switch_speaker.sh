@@ -28,8 +28,6 @@ fi
 if [ $start -le 1 ] && [ $end -ge 1 ]; then
     echo "Generating wavs for flipped generated mels"
 
-    mkdir -p ${exp_dir[$SLURM_ARRAY_TASK_ID]}/flip_generate_wav_${test_dir}_$vocoder/log
-
     if [[ $vocoder == "bigvgan" ]]; then
 
         curr_dir=$(pwd)

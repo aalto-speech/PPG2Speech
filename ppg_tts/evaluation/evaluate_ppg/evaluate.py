@@ -26,7 +26,9 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    logger.add(f"[Somewhere in the exp folder for logging]", rotation='200 MB')
+    edit_path = Path(args.ppg).parent.parent
+
+    logger.add(f"{edit_path.as_posix()}/ppg_evaluate.log", rotation='200 MB')
 
     # Load data
     tts_base_dict = load_scp(args.tts_baseline_ppg)

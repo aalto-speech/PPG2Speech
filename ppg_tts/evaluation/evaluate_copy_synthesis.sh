@@ -12,7 +12,7 @@ if [ $# -lt 5 ]; then
 fi
 
 start="${6:-0}"
-end="${7:-5}"
+end="${7:-6}"
 
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 test_dir=$(basename ${testset})
@@ -21,14 +21,12 @@ if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Generating mels with the same speaker identity"
 
     python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
-        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset}
 
 fi
 
 if [ $start -le 1 ] && [ $end -ge 1 ]; then
     echo "Generating wavs for generated mels"
-
-    mkdir -p ${exp_dir[$SLURM_ARRAY_TASK_ID]}/wav_${test_dir}_$vocoder/log
 
     if [[ $vocoder == "bigvgan" ]]; then
 
@@ -62,7 +60,7 @@ if [ $start -le 4 ] && [ $end -ge 4 ]; then
     python -m ppg_tts.evaluation.evaluate_pitch_mcd --data_dir ${testset} --flip_wav_dir ${exp_dir}/wav_${test_dir}_$vocoder
 fi
 
-if [ $start -le 5 ] && [ $end -ge 5 ] && [ "$test_dir" == *"unseen"* ]; then
+if [ $start -le 5 ] && [ $end -ge 5 ] && [[ "$test_dir" == *"unseen"* ]]; then
     python -m ppg_tts.evaluation.evaluate_spk_emb --data_dir ${testset} \
         --flip_wav_dir ${exp_dir}/wav_${test_dir}_$vocoder --device ${device}
 fi

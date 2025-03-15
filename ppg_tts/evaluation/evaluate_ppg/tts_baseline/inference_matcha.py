@@ -1,4 +1,5 @@
 import argparse
+import kaldiio
 import os
 import warnings
 from pathlib import Path
@@ -66,6 +67,11 @@ def validate_args(args):
     ), "File must be provided Matcha-T(ea)TTS need sometext to whisk the waveforms."
     assert args.temperature >= 0, "Sampling temperature cannot be negative"
     assert args.speaking_rate >= 0, "Speaking rate must be greater than 0"
+    if not os.path.exists(args.file):
+        raise ValueError(f"{args.file} not exists!")
+    
+    if args.spk and not os.path.exists(args.spk):
+        raise ValueError(f"Speaker embedding scp must be provided")
     return args
 
 
@@ -189,6 +195,8 @@ def main():
         text_lines[key] = ' '.join(text)
 
     processed_lines = {key: process_text(i, line, "cpu") for i, (key, line) in enumerate(text_lines.items())}
+    keys = [key for key in processed_lines]
+
     x = [line["x"].squeeze() for _, line in processed_lines.items()]
     # Pad
     x = torch.nn.utils.rnn.pad_sequence(x, batch_first=True)
@@ -205,12 +213,14 @@ def main():
             spk_emb = np.random.rand(1, 512)
             warn = "[!] Speaker ID not provided! Generate a random speaker embedding using torch.randn"
             warnings.warn(warn, UserWarning)
+            spk_emb = np.repeat(spk_emb, x.shape[0], axis=0)
         else:
-            spk_emb = np.load(args.spk)[np.newaxis]
-        inputs["spks"] = np.repeat(spk_emb, x.shape[0], axis=0).astype(np.float32)
+            spk_emb_dict = kaldiio.load_scp(args.spk)
+            spks = [spk_emb_dict[key] for key in keys]
+            spk_emb = np.vstack(spks).astype(np.float32)
+        inputs["spks"] = spk_emb
 
     has_vocoder_embedded = model_outputs[0].name == "wav"
-    keys = [key for key in processed_lines]
     if has_vocoder_embedded:
         write_wavs(model, inputs, args.output_dir, keys=keys)
     elif args.vocoder:

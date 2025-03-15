@@ -66,16 +66,18 @@ if __name__ == "__main__":
     if args.switch_speaker:
         mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
     elif args.edit_ppg:
-        mel_save_dir = exp_dir / f"edit_mel_{dirname}"
+        mel_save_dir = exp_dir / f"editing/mel_{dirname}"
     else:
         mel_save_dir = exp_dir / f"mel_{dirname}"
 
     logger.add(f"{mel_save_dir}/synthesis.log", rotation='200 MB')
 
-    logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {args.device}")
+    device = args.device if torch.cuda.is_available() else 'cpu'
+
+    logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {device}")
     model_cls = import_obj_from_string(args.model_class)
-    model, diff_steps, temperature = load_model(model_cls, args.ckpt, args.device)
-    model = model.to(args.device)
+    model, diff_steps, temperature = load_model(model_cls, args.ckpt, device)
+    model = model.to(device)
     exp_dir = Path(args.ckpt).parent.parent
 
     # sparse_method, sparse_coeff = exp_dir.as_posix().split('_')[-2:]
@@ -107,10 +109,10 @@ if __name__ == "__main__":
     speaker_mapping = open(mel_save_dir / "speaker_mapping", "w")
 
     if args.edit_ppg:
-        os.makedirs(f"{mel_save_dir.as_posix()}/editing", exist_ok=True)
+        edit_path = Path(mel_save_dir).parent
         editor = PPGEditor(args.phonemes)
-        ppg_writer = WriteHelper(f'ark,scp:{mel_save_dir.as_posix()}/editing/ppg.ark,{mel_save_dir.as_posix()}/editing/ppg.scp')
-        text_writer = open(f"{mel_save_dir.as_posix()}/editing/text", 'w', encoding='utf-8')
+        ppg_writer = WriteHelper(f'ark,scp:{edit_path.as_posix()}/ppg.ark,{edit_path.as_posix()}/ppg.scp')
+        text_writer = open(f"{edit_path.as_posix()}/text", 'w', encoding='utf-8')
         edits_json = {}
 
     with torch.inference_mode():
@@ -144,15 +146,15 @@ if __name__ == "__main__":
 
                 ppg = torch.from_numpy(new_ppg).unsqueeze(0)
             else:
-                ppg = testdata['ppg'].to(args.device)
+                ppg = testdata['ppg'].to(device)
 
             pred_mel = model.synthesis(
-                x=ppg.to(args.device),
-                x_mask=testdata['ppg_mask'].to(args.device),
-                spk_emb=target_spk_emb.unsqueeze(0).to(args.device),
-                pitch_target=target_pitch.to(args.device),
-                v_flag=testdata['v_flag'].to(args.device),
-                mel_mask=testdata['mel_mask'].to(args.device),
+                x=ppg.to(device),
+                x_mask=testdata['ppg_mask'].to(device),
+                spk_emb=target_spk_emb.unsqueeze(0).to(device),
+                pitch_target=target_pitch.to(device),
+                v_flag=testdata['v_flag'].to(device),
+                mel_mask=testdata['mel_mask'].to(device),
                 diff_steps=diff_steps,
                 temperature=temperature,
             )
@@ -168,9 +170,10 @@ if __name__ == "__main__":
         ppg_writer.close()
         text_writer.close()
 
-        with open(f"{mel_save_dir.as_posix()}/editing/edits.json", 'w') as writer:
+        with open(f"{edit_path.as_posix()}/edits.json", 'w', encoding='utf-8') as writer:
             json.dump(
                 edits_json,
                 writer,
                 indent=4,
+                ensure_ascii=False,
             )
