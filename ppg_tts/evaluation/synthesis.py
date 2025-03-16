@@ -66,7 +66,7 @@ if __name__ == "__main__":
     if args.switch_speaker:
         mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
     elif args.edit_ppg:
-        mel_save_dir = exp_dir / f"editing/mel_{dirname}"
+        mel_save_dir = exp_dir / f"editing_{dirname}/mel"
     else:
         mel_save_dir = exp_dir / f"mel_{dirname}"
 
