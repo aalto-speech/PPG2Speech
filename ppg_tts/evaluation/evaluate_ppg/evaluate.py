@@ -39,9 +39,9 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    edit_path = Path(args.synthesized_ppg).parent / 'log'
+    log_path = Path(args.synthesized_ppg).parent / 'log'
 
-    logger.add(f"{edit_path.as_posix()}/ppg_evaluate.log", rotation='200 MB')
+    logger.add(f"{log_path.as_posix()}/ppg_evaluate.log", rotation='200 MB')
 
     # Load data
     edited_ppg_dict = load_scp(args.edited_ppg)
@@ -54,7 +54,8 @@ if __name__ == '__main__':
         with open(args.matcha_aligned_edits, 'r') as reader:
             matcha_aligned_edits = json.load(reader)
 
-    logger.info("Start Evaluating Jensen-Shannon Divergence and Wasserstein Distance.")
+    logger.info(f"Start Evaluating Jensen-Shannon Divergence and Wasserstein Distance"
+                f"for {Path(args.synthesized_ppg).parent.parent.as_posix()}.")
 
     num_frames = 0
     total_jsd = 0
