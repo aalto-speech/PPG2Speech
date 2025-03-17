@@ -1,4 +1,5 @@
 import json
+import math
 import numpy as np
 from argparse import ArgumentParser
 from pathlib import Path
@@ -49,8 +50,8 @@ if __name__ == '__main__':
         c = list(align_info_at_pos.keys())[0]
 
         edit_info[key]["edit_region"] = (
-            align_info_at_pos[c]['starttime'],
-            align_info_at_pos[c]['endtime']
+            math.ceil(align_info_at_pos[c]['starttime'] * 1.161), #! 22050HZ with 256 hopsize to kaldi 10ms mel frame
+            math.ceil(align_info_at_pos[c]['endtime'] * 1.161)
         )
 
         matcha_edits_json[key] = edit_info[key]

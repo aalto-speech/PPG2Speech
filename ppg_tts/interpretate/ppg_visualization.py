@@ -10,7 +10,7 @@ import matplotlib.patches as patches
 import math
 
 def visualize_multiple_ppg(ppg_list, titles=None, figsize=(20, 12), save_path='./figure.png', 
-                           y_labels_map=None, highlight_range=None):
+                           y_labels_map=None, highlight_ranges=None):
     """
     Visualize multiple Phonetic Posteriograms (PPGs) in one graph.
 
@@ -47,8 +47,8 @@ def visualize_multiple_ppg(ppg_list, titles=None, figsize=(20, 12), save_path='.
         fig.colorbar(im, ax=ax, label='Intensity', fraction=0.046, pad=0.04)
         
         # Highlight the specified range with a red rectangle
-        if highlight_range:
-            start, end = highlight_range
+        if highlight_ranges:
+            start, end = highlight_ranges[i]
             width = end - start
             height = ppg.shape[1]
             rect = patches.Rectangle((start, 0), width, height, linewidth=2, edgecolor='red', facecolor='none')
@@ -111,6 +111,9 @@ if __name__ == '__main__':
     with open("exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/edits.json", 'r') as reader:
         edits_json = json.load(reader)
 
+    with open("exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/matcha_edits.json", 'r') as reader:
+        matcha_json = json.load(reader)
+
     kaldi_example = kaldi_ppgs[key]
 
     edit = edit_ppgs[key]
@@ -120,9 +123,12 @@ if __name__ == '__main__':
     ppgs = [kaldi_example[:, :32], edit[:, :32], synthe[:, :32], baseline_ppgs[key][:, :32]]
     titles = ['original ppg', 'ppg after editing', 'synthesized ppg', 'ppg from tts baseline']
 
+    highlights = [edits_json[key]["edit_region"], edits_json[key]["edit_region"], 
+                  edits_json[key]["edit_region"], matcha_json[key]["edit_region"]]
+
     visualize_multiple_ppg(
         ppgs, titles, 
         save_path=f"exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/{key}.png",
         y_labels_map={v: k for k, v in label_map.items()},
-        highlight_range=edits_json[key]["edit_region"],
+        highlight_ranges=highlights,
     )
