@@ -10,6 +10,7 @@ inspect_vocoder/
 ppg_tts/interpretate/*.json
 ppg_tts/interpretate/*.txt
 *.onnx
+eval_baseline/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

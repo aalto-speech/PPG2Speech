@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
             if args.edit_ppg:
                 text = testset[i]['text']
-                new_ppg, new_text, region = editor.edit_ppg(
+                new_ppg, (new_text, pos_in_str), region = editor.edit_ppg(
                     testdata['ppg'].squeeze(0).numpy(), text=text
                 )
 
@@ -142,6 +142,7 @@ if __name__ == "__main__":
                     'origin_text': text,
                     'new_text': new_text,
                     'edit_region': region,
+                    'pos_in_str': pos_in_str,
                 }
 
                 ppg = torch.from_numpy(new_ppg).unsqueeze(0)

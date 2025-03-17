@@ -69,7 +69,7 @@ class PPGEditor:
 
         return alignment_dict
     
-    def _rebuild_text_with_replace(self, orig_text: str, new_text_seq: List[str], offset: int) -> str:
+    def _rebuild_text_with_replace(self, orig_text: str, new_text_seq: List[str], offset: int) -> Tuple[str, int]:
         reconstruct = []
         curr = 0
 
@@ -79,10 +79,19 @@ class PPGEditor:
             else:
                 reconstruct.append(self.i2c[new_text_seq[curr + offset]])
                 curr += 1
+
+        new_string = "".join(reconstruct)
+
+        diff_idx = -1
+
+        for i, (c1, c2) in enumerate(zip(orig_text, new_string)):
+            if c1 != c2:
+                diff_idx = i
+                break
         
-        return "".join(reconstruct)
+        return new_string, diff_idx
     
-    def edit_ppg(self, ppg: np.ndarray, text: str) -> Tuple[np.ndarray, str, Tuple]:
+    def edit_ppg(self, ppg: np.ndarray, text: str) -> Tuple[np.ndarray, Tuple[str, int], Tuple]:
         """
         This function randomly select a frame range and an index.
         Move the dominate probability to the new index
@@ -114,11 +123,15 @@ class PPGEditor:
         src_char = text_seq[src_char_idx]
     
         # Randomly select another distinct number from the full range 3-31
-        replace = random.choice([x for x in range(3, 32) if x != text_seq[src_char_idx]])
+        replace_candidates = [x for x in range(3, 32) if x != src_char]
+        replace = random.choice(replace_candidates)
+
+        assert replace != src_char, \
+            "The replace char and the original char are the same"
 
         src_char_start, src_char_end = alignments[src_char_idx][0]
 
-        text_seq[src_char_idx - OFFSET] = replace
+        text_seq[src_char_idx] = replace
 
         new_ppg = ppg.copy()
         new_ppg.setflags(write=True)

@@ -1,9 +1,10 @@
 import json
 import numpy as np
 from argparse import ArgumentParser
+from fastdtw import fastdtw
 from kaldiio import load_scp
 from pathlib import Path
-from scipy.stats import wasserstein_distance_nd
+from scipy.stats import wasserstein_distance
 from scipy.spatial.distance import jensenshannon
 from loguru import logger
 
@@ -25,6 +26,12 @@ def parse_args():
         type=str,
     )
 
+    parser.add_argument(
+        '--matcha_aligned_edits',
+        type=str,
+        default=None,
+    )
+
     args = parser.parse_args()
 
     return args
@@ -32,7 +39,7 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    edit_path = Path(args.edit_json).parent
+    edit_path = Path(args.synthesized_ppg).parent / 'log'
 
     logger.add(f"{edit_path.as_posix()}/ppg_evaluate.log", rotation='200 MB')
 
@@ -43,9 +50,12 @@ if __name__ == '__main__':
     with open(args.edit_json, 'r') as reader:
         edit_details = json.load(reader)
 
+    if args.matcha_aligned_edits is not None:
+        with open(args.matcha_aligned_edits, 'r') as reader:
+            matcha_aligned_edits = json.load(reader)
+
     logger.info("Start Evaluating Jensen-Shannon Divergence and Wasserstein Distance.")
 
-    num_utt = 0
     num_frames = 0
     total_jsd = 0
     total_wass = 0
@@ -57,15 +67,31 @@ if __name__ == '__main__':
 
         region_slice = slice(edited_region[0], edited_region[1], 1)
 
+        source_region = source_edit_ppg[region_slice]
+
+        if args.matcha_aligned_edits is not None:
+            matcha_region = slice(
+                matcha_aligned_edits[key]["edit_region"][0],
+                matcha_aligned_edits[key]["edit_region"][1],
+                1
+            )
+            synthesized_editing = synthesize_ppg[matcha_region]
+            num_frames += (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
+        else:
+            synthesized_editing = synthesize_ppg[region_slice]
+            num_frames += (edited_region[1] - edited_region[0])
+
         # Compare ppgs
-        jsd = jensenshannon(source_edit_ppg[region_slice], synthesize_ppg[region_slice], axis=-1)
-        wasserstein = wasserstein_distance_nd(source_edit_ppg[region_slice], synthesize_ppg[region_slice])
+        # jsd = jensenshannon(source_edit_ppg[region_slice], synthesize_ppg[region_slice], axis=-1)
+        # wasserstein = wasserstein_distance_nd(source_edit_ppg[region_slice], synthesize_ppg[region_slice])
 
-        logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd.mean()}, wasserstein distance: {wasserstein}")
+        jsd, _ = fastdtw(source_region, synthesized_editing, 5, jensenshannon)
 
-        num_utt += 1
-        num_frames += (edited_region[1] - edited_region[0])
-        total_jsd += jsd.sum()
+        wasserstein, _ = fastdtw(source_region, synthesized_editing, 5, wasserstein_distance)
+
+        logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}, wasserstein distance: {wasserstein}")
+
+        total_jsd += jsd
         total_wass += wasserstein
 
     logger.info(
@@ -73,5 +99,5 @@ if __name__ == '__main__':
     )
 
     logger.info(
-        f"Inference done. Average wasserstein distance: {total_wass / num_utt}"
+        f"Inference done. Average wasserstein distance: {total_wass / num_frames}"
     ) 

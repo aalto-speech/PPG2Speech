@@ -36,7 +36,10 @@ First, use alignment to select editing region:
 #### 4. Evaluate Kaldi PPG/pdf-post
 
 Extract PPG/pdf-post for TTS speech and PPG-synthesized speech.
-Evaluate frame-level [Jennsen-Shannon Divergence](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html) and [Wasserstein distance](https://docs.scipy.org/doc/scipy-1.15.2/reference/generated/scipy.stats.wasserstein_distance_nd.html) in the editied region.
+
+Extract Alignment from TTS baseline.
+
+Evaluate DTW cost using [Jennsen-Shannon Divergence](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html) and [Wasserstein distance](https://docs.scipy.org/doc/scipy-1.15.2/reference/generated/scipy.stats.wasserstein_distance_nd.html) in the editied region (using DTW to deal with frame alignment issue).
 
 
 ## Training
