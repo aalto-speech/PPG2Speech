@@ -77,18 +77,16 @@ if __name__ == '__main__':
                 1
             )
             synthesized_editing = synthesize_ppg[matcha_region]
-            num_frames = (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
+            matcha_frames = (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
+            source_frames = (edited_region[1] - edited_region[0])
+            num_frames = max(matcha_frames, source_frames)
         else:
             synthesized_editing = synthesize_ppg[region_slice]
             num_frames = (edited_region[1] - edited_region[0])
 
-        # Compare ppgs
-        # jsd = jensenshannon(source_edit_ppg[region_slice], synthesize_ppg[region_slice], axis=-1)
-        # wasserstein = wasserstein_distance_nd(source_edit_ppg[region_slice], synthesize_ppg[region_slice])
+        jsd, _ = fastdtw(source_region, synthesized_editing, 10, jensenshannon)
 
-        jsd, _ = fastdtw(source_region, synthesized_editing, 5, jensenshannon)
-
-        wasserstein, _ = fastdtw(source_region, synthesized_editing, 5, wasserstein_distance)
+        wasserstein, _ = fastdtw(source_region, synthesized_editing, 10, wasserstein_distance)
 
         logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}, wasserstein distance: {wasserstein}")
 

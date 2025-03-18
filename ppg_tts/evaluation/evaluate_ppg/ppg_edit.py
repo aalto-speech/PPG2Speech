@@ -6,8 +6,8 @@ from collections import defaultdict
 from typing import Tuple, List, Dict
 
 SUBSAMPLING_FACTOR = 3
-random.seed(17)
-np.random.seed(17)
+random.seed(21)
+np.random.seed(21)
 
 common_errors = {
     'ä': ('a', 'e'),

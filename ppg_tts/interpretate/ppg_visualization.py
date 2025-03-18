@@ -104,14 +104,16 @@ if __name__ == '__main__':
     }
 
     kaldi_ppgs = load_scp('data/spk_sanity/ppg.scp')
-    edit_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/ppg.scp')
-    synthesized_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/wav_hifigan/kaldi_dataset/ppg.scp')
-    baseline_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/wav_baseline_hifigan/kaldi_dataset/ppg.scp')
+    edit_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/ppg.scp')
+    synthesized_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_hifigan/kaldi_dataset/ppg.scp')
+    baseline_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_baseline_hifigan/kaldi_dataset/ppg.scp')
 
-    with open("exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/edits.json", 'r') as reader:
+    baseline_gt_ppgs = load_scp('eval_baseline/kaldi_dataset/ppg.scp')
+
+    with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/edits.json", 'r') as reader:
         edits_json = json.load(reader)
 
-    with open("exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/matcha_edits.json", 'r') as reader:
+    with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/matcha_edits.json", 'r') as reader:
         matcha_json = json.load(reader)
 
     kaldi_example = kaldi_ppgs[key]
@@ -120,15 +122,18 @@ if __name__ == '__main__':
 
     synthe = synthesized_ppgs[key]
 
-    ppgs = [kaldi_example[:, :32], edit[:, :32], synthe[:, :32], baseline_ppgs[key][:, :32]]
-    titles = ['original ppg', 'ppg after editing', 'synthesized ppg', 'ppg from tts baseline']
+    baseline_gt = baseline_gt_ppgs[key]
+
+    ppgs = [kaldi_example[:, :32], edit[:, :32], synthe[:, :32], baseline_ppgs[key][:, :32], baseline_gt[:, :32]]
+    titles = ['original ppg', 'ppg after editing', 'synthesized ppg', 'ppg from tts baseline', 'ppg from tts baseline without editing']
 
     highlights = [edits_json[key]["edit_region"], edits_json[key]["edit_region"], 
-                  edits_json[key]["edit_region"], matcha_json[key]["edit_region"]]
+                  edits_json[key]["edit_region"], matcha_json[key]["edit_region"],
+                  [matcha_json[key]["edit_region"][0], matcha_json[key]["edit_region"][1]]]
 
     visualize_multiple_ppg(
         ppgs, titles, 
-        save_path=f"exp6_kaldi-ppgV2_conformer_transformer_2_mid2/editing_spk_sanity/{key}.png",
+        save_path=f"exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/{key}.png",
         y_labels_map={v: k for k, v in label_map.items()},
         highlight_ranges=highlights,
     )
