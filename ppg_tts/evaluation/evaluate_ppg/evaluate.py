@@ -58,9 +58,9 @@ if __name__ == '__main__':
                 f"for {Path(args.synthesized_ppg).parent.parent.as_posix()}.")
 
     num_frames = 0
-    total_jsd = 0
-    total_wass = 0
-    for key in synthesized_ppg_dict:
+    average_jsd = 0
+    average_wass = 0
+    for i, key in enumerate(synthesized_ppg_dict):
         source_edit_ppg = edited_ppg_dict[key]
         synthesize_ppg = synthesized_ppg_dict[key]
 
@@ -77,10 +77,10 @@ if __name__ == '__main__':
                 1
             )
             synthesized_editing = synthesize_ppg[matcha_region]
-            num_frames += (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
+            num_frames = (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
         else:
             synthesized_editing = synthesize_ppg[region_slice]
-            num_frames += (edited_region[1] - edited_region[0])
+            num_frames = (edited_region[1] - edited_region[0])
 
         # Compare ppgs
         # jsd = jensenshannon(source_edit_ppg[region_slice], synthesize_ppg[region_slice], axis=-1)
@@ -92,13 +92,13 @@ if __name__ == '__main__':
 
         logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}, wasserstein distance: {wasserstein}")
 
-        total_jsd += jsd
-        total_wass += wasserstein
+        average_jsd += ((jsd / num_frames) - average_jsd) / (i + 1)
+        average_wass += ((wasserstein / num_frames) - average_jsd) / (i + 1)
 
     logger.info(
-        f"Inference done. Average frame-level jensen-shannon divergence: {total_jsd / num_frames}"
+        f"Inference done. Average frame-level jensen-shannon divergence: {average_jsd / num_frames}"
     )
 
     logger.info(
-        f"Inference done. Average wasserstein distance: {total_wass / num_frames}"
+        f"Inference done. Average wasserstein distance: {average_wass / num_frames}"
     ) 

@@ -21,7 +21,7 @@ if __name__ == "__main__":
         mapping = reader.readlines()
     
     avg_simi = 0.0
-    for entry in mapping:
+    for i, entry in enumerate(mapping):
         source_key, target_key = entry.strip("\n").split()
 
         synthesized_wav_path = f"{args.flip_wav_dir}/{source_key}_generated_e2e.wav"
@@ -34,7 +34,7 @@ if __name__ == "__main__":
             target_wav_path
         )
 
-        avg_simi += similarity
+        avg_simi += (similarity - avg_simi) / (i + 1)
 
         logger.info(
             f"Cosine similarity between {source_key} and {target_key} is {similarity},"
@@ -44,7 +44,5 @@ if __name__ == "__main__":
             shutil.copyfile(target_wav_path, f"{args.flip_wav_dir}/{source_key}_speaker_reference.wav")
 
             shutil.copyfile(source_wav_path, f"{args.flip_wav_dir}/{source_key}_context_reference.wav")
-
-    avg_simi /= len(dataset)
 
     logger.info(f"The average cosine similarity is {avg_simi}")
