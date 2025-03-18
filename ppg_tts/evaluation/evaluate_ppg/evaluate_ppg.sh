@@ -111,11 +111,15 @@ fi
 
 if [ $start -le 5 ] && [ $end -ge 5 ]; then
     echo "Step 5: Evaluating PPG between our model and baseline TTS";
+
+    echo "Evaluating PPG from model synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}/wav_$vocoder/kaldi_dataset/ppg.scp \
         --edit_json ${exp_dir}/editing_${test_dir}/edits.json
 
+    
+    echo "\nEvaluating PPG from TTS-baseline synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}/wav_baseline_$vocoder/kaldi_dataset/ppg.scp \
