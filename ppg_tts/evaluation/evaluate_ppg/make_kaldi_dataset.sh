@@ -41,9 +41,10 @@ for file in "$WAV_DIR"/*.wav; do
 done
 
 # Copy the text file
-cp -L "$TEXT_FILE" "$OUTPUT_DIR/text" || { echo "Error copying text file"; exit 1; }
+# cp -L "$TEXT_FILE" "$OUTPUT_DIR/text" || { echo "Error copying text file"; exit 1; }
+awk '{ for(i=2; i<=NF; i++) { $i=tolower($i); gsub(/[^a-zäöå0-9]/, "", $i) } print }' "$TEXT_FILE" > "$OUTPUT_DIR/text"
 
 echo "Kaldi dataset files created in $OUTPUT_DIR:"
 echo " - wav.scp (resampled to 16kHz using SoX)"
 echo " - utt2spk"
-echo " - text (copied from $TEXT_FILE)"
+echo " - text (copied and cleaned from $TEXT_FILE)"
