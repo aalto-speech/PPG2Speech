@@ -43,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
         default='data/spk_sanity/phones.txt'
     )
 
+    parser.add_argument(
+        '--rule_based_edit',
+        action='store_true',
+        default=False,
+    )
+
     return parser
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
@@ -66,7 +72,8 @@ if __name__ == "__main__":
     if args.switch_speaker:
         mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
     elif args.edit_ppg:
-        mel_save_dir = exp_dir / f"editing_{dirname}/mel"
+        flag = 'rule_based' if args.rule_based_edit else ''
+        mel_save_dir = exp_dir / f"editing_{dirname}_{flag}/mel"
     else:
         mel_save_dir = exp_dir / f"mel_{dirname}"
 
@@ -80,20 +87,11 @@ if __name__ == "__main__":
     model = model.to(device)
     exp_dir = Path(args.ckpt).parent.parent
 
-    # sparse_method, sparse_coeff = exp_dir.as_posix().split('_')[-2:]
-
-    # match sparse_method:
-    #     case 'topk': sparse_coeff = int(sparse_coeff)
-    #     case 'percentage': sparse_coeff = float(sparse_coeff)
-    #     case _: raise ValueError(f"Failed to parse sparse method from {exp_dir}")
-
     logger.info(f"Load testset from {args.data_dir}")
 
     testset = ExtendDataset(
         data_dir=args.data_dir,
         no_ctc=False,
-        # ppg_sparse=sparse_method,
-        # sparse_coeff=sparse_coeff,
     )
 
     testloader = DataLoader(
@@ -130,7 +128,8 @@ if __name__ == "__main__":
             if args.edit_ppg:
                 text = testset[i]['text']
                 new_ppg, (new_text, pos_in_str), region = editor.edit_ppg(
-                    testdata['ppg'].squeeze(0).numpy(), text=text
+                    testdata['ppg'].squeeze(0).numpy(), text=text,
+                    is_rule_based=args.rule_based_edit,
                 )
 
                 ppg_writer(source_key, new_ppg)

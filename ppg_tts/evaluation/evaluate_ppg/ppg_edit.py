@@ -9,6 +9,15 @@ SUBSAMPLING_FACTOR = 3
 random.seed(17)
 np.random.seed(17)
 
+common_errors = {
+    'ä': ('a', 'e'),
+    'ö': ('o',),
+    'y': ('u', 'e'),
+    'r': ('l', 'w'),
+    'a': ('ä',),
+    'o': ('ö',),
+}
+
 class PPGEditor:
     def __init__(self, phns: str):
         self.c2i = {}
@@ -23,6 +32,13 @@ class PPGEditor:
             self.i2c[int(i)] = c
 
         self.dist_func = lambda x, y: 0 if x == y else 1
+
+        self.common_error_ids = {}
+
+        for key in common_errors:
+            i_k = self.c2i[key]
+
+            self.common_error_ids[i_k] = tuple([self.c2i[item] for item in common_errors[key]])
 
     def char_to_idx(self, c: str) -> int:
         return self.c2i.get(c)
@@ -93,7 +109,7 @@ class PPGEditor:
         
         return new_string, diff_idx
     
-    def edit_ppg(self, ppg: np.ndarray, text: str) -> Tuple[np.ndarray, Tuple[str, int], Tuple]:
+    def edit_ppg(self, ppg: np.ndarray, text: str, is_rule_based: bool=False) -> Tuple[np.ndarray, Tuple[str, int], Tuple]:
         """
         This function randomly select a frame range and an index.
         Move the dominate probability to the new index
@@ -117,31 +133,54 @@ class PPGEditor:
 
         alignments = self._dtw_align(hyp, text_seq)
 
-        candidates = [key for key in alignments \
-                      if key >= OFFSET and 3 <= text_seq[key] <= 31
-                     ]
+        if not is_rule_based:
 
-        src_char_idx = random.choice(candidates)
-        src_char = text_seq[src_char_idx]
-    
-        # Randomly select another distinct number from the full range 3-31
-        replace_candidates = [x for x in range(3, 32) if x != src_char]
-        replace = random.choice(replace_candidates)
+            candidates = [key for key in alignments \
+                        if key >= OFFSET and 3 <= text_seq[key] <= 31
+                        ]
 
-        assert replace != src_char, \
-            "The replace char and the original char are the same"
+            src_char_idx = random.choice(candidates)
+            src_char = text_seq[src_char_idx]
+        
+            # Randomly select another distinct number from the full range 3-31
+            replace_candidates = [x for x in range(3, 32) if x != src_char]
+            replace = random.choice(replace_candidates)
 
-        src_char_start, src_char_end = alignments[src_char_idx][0]
+            assert replace != src_char, \
+                "The replace char and the original char are the same"
 
-        text_seq[src_char_idx] = replace
+            src_char_start, src_char_end = alignments[src_char_idx][0]
 
-        new_ppg = ppg.copy()
-        new_ppg.setflags(write=True)
+            text_seq[src_char_idx] = replace
 
-        new_ppg[src_char_start:src_char_end+1, replace] = ppg[src_char_start:src_char_end+1, src_char]
-        new_ppg[src_char_start:src_char_end+1, src_char] = 0.0
+            new_ppg = ppg.copy()
+            new_ppg.setflags(write=True)
 
-        return new_ppg, self._rebuild_text_with_replace(text, text_seq, OFFSET), alignments[src_char_idx][0]
+            new_ppg[src_char_start:src_char_end+1, replace] = ppg[src_char_start:src_char_end+1, src_char]
+            new_ppg[src_char_start:src_char_end+1, src_char] = 0.0
+
+            return new_ppg, self._rebuild_text_with_replace(text, text_seq, OFFSET), alignments[src_char_idx][0]
+        
+        else:
+            # Select character in the error set, replace with specific error
+            candidate_indices = list(filter(lambda x: text_seq[x] in self.common_error_ids, range(len(text_seq))))
+
+            index = random.choice(candidate_indices)
+
+            src_char = text_seq[index]
+            target_char = random.choice(self.common_error_ids[src_char])
+
+            src_char_start, src_char_end = alignments[index][0]
+
+            text_seq[index] = target_char
+
+            new_ppg = ppg.copy()
+            new_ppg.setflags(write=True)
+
+            new_ppg[src_char_start:src_char_end+1, target_char] = ppg[src_char_start:src_char_end+1, src_char]
+            new_ppg[src_char_start:src_char_end+1, src_char] = 0.0
+
+            return new_ppg, self._rebuild_text_with_replace(text, text_seq, OFFSET), alignments[index][0]
 
 if __name__ == '__main__':
     from kaldiio import load_scp
