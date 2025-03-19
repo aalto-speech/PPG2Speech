@@ -70,6 +70,8 @@ if __name__ == '__main__':
 
         source_region = source_edit_ppg[region_slice]
 
+        num_invalid = 0
+
         if args.matcha_aligned_edits is not None:
             matcha_region = slice(
                 matcha_aligned_edits[key]["edit_region"][0],
@@ -79,7 +81,7 @@ if __name__ == '__main__':
             synthesized_editing = synthesize_ppg[matcha_region]
             matcha_frames = (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
             source_frames = (edited_region[1] - edited_region[0])
-            num_frames = max(matcha_frames, source_frames)
+            num_frames = source_frames # min(matcha_frames, source_frames)
         else:
             synthesized_editing = synthesize_ppg[region_slice]
             num_frames = (edited_region[1] - edited_region[0])
@@ -88,10 +90,15 @@ if __name__ == '__main__':
 
         wasserstein, _ = fastdtw(source_region, synthesized_editing, 10, wasserstein_distance)
 
-        logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}, wasserstein distance: {wasserstein}")
-
-        average_jsd += ((jsd / num_frames) - average_jsd) / (i + 1)
-        average_wass += ((wasserstein / num_frames) - average_jsd) / (i + 1)
+        #! Filter Possibly invalid results
+        if jsd == 0.0 or wasserstein == 0.0:
+            logger.warning(f"{key}: invalid cost computation")
+            num_invalid += 1
+            continue
+        else:
+            logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}, wasserstein distance: {wasserstein}")
+        average_jsd += ((jsd / num_frames) - average_jsd) / (i - num_invalid + 1)
+        average_wass += ((wasserstein / num_frames) - average_jsd) / (i - num_invalid + 1)
 
     logger.info(
         f"Inference done. Average frame-level jensen-shannon divergence: {average_jsd / num_frames}"

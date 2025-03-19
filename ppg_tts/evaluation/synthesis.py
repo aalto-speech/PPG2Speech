@@ -13,6 +13,37 @@ from ..dataset import ExtendDataset, PersoCollateFn
 from .evaluate_ppg.ppg_edit import PPGEditor
 from ..utils import load_model, import_obj_from_string
 
+def seed_everything(seed: int=17) -> None:
+    """
+    Seed random number generators for reproducibility.
+    
+    This sets the seed for:
+      - the Python built-in random module,
+      - NumPy,
+      - PyTorch (for both CPU and GPU, if available).
+
+    Note:
+      - SciPy’s random routines use NumPy’s random generator.
+      - For full reproducibility in PyTorch, we also disable CUDNN benchmarking.
+    """
+    # Seed Python random module
+    random.seed(seed)
+
+    # Seed NumPy random generator
+    np.random.seed(seed)
+
+    # Seed PyTorch RNG for CPU
+    torch.manual_seed(seed)
+    
+    # If using GPU, seed all CUDA devices
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    # For PyTorch, enforce deterministic behavior (may affect performance)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Argument parser for synthesis.")
     parser.add_argument("--data_dir", 
@@ -60,6 +91,7 @@ def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.T
     return testset[random_idx]['key'], testset[random_idx]['spk_emb']
 
 if __name__ == "__main__":
+    seed_everything(42)
     parser = build_parser()
     args = parser.parse_args()
 
