@@ -86,6 +86,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=1.0,
     )
 
+    parser.add_argument(
+        '--sway_coeff',
+        type=float,
+        default=-1.0,
+    )
+
     return parser
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
@@ -108,12 +114,12 @@ if __name__ == "__main__":
     dirname = os.path.basename(args.data_dir)
     
     if args.switch_speaker:
-        mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}"
+        mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}_gd{args.guidance_scale}_sw{args.sway_coeff}"
     elif args.edit_ppg:
         flag = '_rule_based' if args.rule_based_edit else ''
-        mel_save_dir = exp_dir / f"editing_{dirname}{flag}/mel"
+        mel_save_dir = exp_dir / f"editing_{dirname}{flag}/mel_gd{args.guidance_scale}_sw{args.sway_coeff}"
     else:
-        mel_save_dir = exp_dir / f"mel_{dirname}"
+        mel_save_dir = exp_dir / f"mel_{dirname}_gd{args.guidance_scale}_sw{args.sway_coeff}"
 
     logger.add(f"{mel_save_dir}/synthesis.log", rotation='200 MB')
 
@@ -124,6 +130,7 @@ if __name__ == "__main__":
     model, diff_steps, temperature = load_model(model_cls, args.ckpt, device)
     model = model.to(device)
     model.cfm.guidance_scale = args.guidance_scale
+    model.cfm.sway_coeff = args.sway_coeff
     exp_dir = Path(args.ckpt).parent.parent
 
     logger.info(f"Load testset from {args.data_dir}")

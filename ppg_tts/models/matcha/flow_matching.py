@@ -129,12 +129,30 @@ class CFM(BASECFM):
 
 
 class CFM_CFG(CFM):
-    def __init__(self, in_channels, out_channel, cfm_params, decoder_params, n_spks=1, spk_emb_dim=64, cfg_prob=0.2, guidance_scale=1):
+    def __init__(self,
+                 in_channels,
+                 out_channel,
+                 cfm_params,
+                 decoder_params,
+                 n_spks=1,
+                 spk_emb_dim=64,
+                 cfg_prob=0.2,
+                 guidance_scale=1,
+                 sway_coeff: float=-1,):
         super().__init__(in_channels, out_channel, cfm_params, decoder_params, n_spks, spk_emb_dim)
 
         self.cfg_prob = cfg_prob
 
         self.guidance_scale = guidance_scale
+
+        if not (-1 <= sway_coeff <= (torch.pi / 2 - 1)):
+            raise ValueError(f"s must be in [-1, pi/2 - 1], got {sway_coeff}")
+        
+        self.sway_coeff = sway_coeff
+
+    def sway_sampling(self, u: torch.Tensor) -> torch.Tensor:
+        term = torch.cos(torch.pi / 2 * u) - 1 + u
+        return u + self.sway_coeff * term
 
     def solve_euler(self, x, t_span, mu, mask, spks, cond):
         """
@@ -151,6 +169,7 @@ class CFM_CFG(CFM):
                 shape: (batch_size, spk_emb_dim)
             cond: Not used but kept for future purposes
         """
+        t_span = self.sway_sampling(t_span)
         t, _, dt = t_span[0], t_span[-1], t_span[1] - t_span[0]
 
         # I am storing this because I can later plot it by putting a debugger here and saving it to a file

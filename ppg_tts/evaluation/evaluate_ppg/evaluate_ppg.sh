@@ -8,13 +8,15 @@ vocoder=$5
 baseline_tts_proj=$6
 rule_based=$7
 
-if [ $# -lt 5 ]; then
-    echo "Usage: $0 <testset> <model_class> <ckpt> <device> <vocoder> <baseline_tts_proj> <rule_based> [<start> <end>]"
+if [ $# -lt 7 ]; then
+    echo "Usage: $0 <testset> <model_class> <ckpt> <device> <vocoder> <baseline_tts_proj> <rule_based> [<guidance> <sway> <start> <end>]"
     exit 1
 fi
 
-start="${8:-0}"
-end="${9:-5}"
+guidance="${8:-1.0}"
+sway="${9:--1.0}"
+start="${10:-0}"
+end="${11:-5}"
 
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 test_dir=$(basename ${testset})
@@ -30,7 +32,8 @@ if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Step 0: Generating mels with edited PPGs"
 
     python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
-        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg ${rule_based}
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg ${rule_based} \
+        --guidance ${guidance} --sway_coeff ${sway}
 fi
 
 if [ $start -le 1 ] && [ $end -ge 1 ]; then
@@ -42,18 +45,18 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
 
         cd vocoder/bigvgan
         python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
-            --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel \
-            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/editing_${test_dir}${flag}/wav_$vocoder
+            --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
+            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}
 
         cd $curr_dir
     else
         python -m vocoder.hifigan.inference_e2e \
             --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
-            --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel \
-            --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder
+            --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
+            --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}
     fi
-    cp ${exp_dir}/editing_${test_dir}${flag}/mel/speaker_mapping \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder/speaker_mapping
+    cp ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway}/speaker_mapping \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}/speaker_mapping
 fi
 
 
@@ -76,10 +79,10 @@ if [ $start -le 3 ] && [ $end -ge 3 ]; then
         --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder \
         --text_file ${exp_dir}/editing_${test_dir}${flag}/text
 
-    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder";
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}";
     
     ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
-        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway} \
         --text_file ${exp_dir}/editing_${test_dir}${flag}/text
 fi
 
@@ -122,7 +125,7 @@ if [ $start -le 5 ] && [ $end -ge 5 ]; then
     echo "Evaluating PPG from model synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
-        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder/kaldi_dataset/ppg.scp \
+        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
         --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json
 
     
