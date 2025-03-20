@@ -15,6 +15,7 @@ class HiddenEncoder(nn.Module):
                  kernel_size: Optional[int]=None,
                  activation: str='gelu',
                  transformer_type: str='conformer',
+                 nhead: int=4,
                  ):
         super(HiddenEncoder, self).__init__()
 
@@ -26,8 +27,8 @@ class HiddenEncoder(nn.Module):
                 self.transformer_layers.append(
                     nn.TransformerEncoderLayer(
                         d_model=input_channel,
-                        nhead=4,
-                        dim_feedforward=4 * input_channel,
+                        nhead=nhead,
+                        dim_feedforward=nhead * input_channel,
                         batch_first=True,
                         activation=activation,
                     )
@@ -38,8 +39,8 @@ class HiddenEncoder(nn.Module):
                 self.transformer_layers.append(
                     ConformerLayer(
                         input_dim=input_channel,
-                        ffn_dim=4*input_channel,
-                        num_attention_heads=4,
+                        ffn_dim=nhead*input_channel,
+                        num_attention_heads=nhead,
                         depthwise_conv_kernel_size=kernel_size,
                         dropout=0.1,
                     )

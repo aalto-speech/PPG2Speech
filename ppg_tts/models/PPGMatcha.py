@@ -1,7 +1,7 @@
 import torch
 from einops import repeat
 from torch import nn
-from .matcha.flow_matching import CFM
+from .matcha.flow_matching import CFM, CFM_CFG
 from .modules import PitchEncoder, SpeakerEmbeddingEncoder, HiddenEncoder
 from .encoder import PPGEncoder
 from typing import List, Tuple
@@ -484,6 +484,219 @@ class PPGMatchaV2(nn.Module):
         cond_enc = self.cond_channel_mapping(cond.transpose(-1, -2)).transpose(-1,-2)
 
         cond_enc = cond_enc.masked_fill(mel_mask.unsqueeze(-1), 0.0)
+
+        #! Get hidden representations of PPG
+        ppg_hidden = self.ppg_encoder.forward(
+            x=x,
+            x_mask=x_mask,
+        )
+
+        #! Upsample ppg_hidden to pitch time resolution
+        z = nn.functional.interpolate(
+            ppg_hidden.permute(0,2,1),
+            size=T,
+            mode='nearest',
+        ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
+
+        #! Map PPG hidden to mel channels
+        mu = self.channel_mapping(z, mel_mask.unsqueeze(-1))
+
+        if mu.size(1) % 2 == 1:
+            pad_to_odd = True
+            mu, mel_mask, cond_enc, _ = self._pad_to_even(
+                mu,
+                mel_mask.unsqueeze(-1),
+                cond_enc,
+            )
+        else:
+            mel_mask = mel_mask.unsqueeze(-1)
+
+        pred_mel = self.cfm.forward(
+            mu=mu.transpose(-1, -2),
+            mask=~mel_mask.transpose(-1, -2),
+            n_timesteps=diff_steps,
+            spks=cond_enc.transpose(-1, -2),
+            temperature=temperature
+        )
+
+        if pad_to_odd:
+            pred_mel = pred_mel[:, :, :-1]
+
+        return pred_mel.transpose(-1, -2)
+
+class PPGMatchaCFG(PPGMatchaV2):
+    def __init__(self,
+                 ppg_dim: int,
+                 encode_dim: int,
+                 spk_emb_size: int,
+                 spk_emb_enc_dim: int,
+                 num_encoder_layers: int,
+                 num_prenet_layers: int,
+                 num_hidden_layers: int,
+                 decoder_num_mid_block: int,
+                 decoder_num_block: int,
+                 pitch_min: float,
+                 pitch_max: float,
+                 pitch_emb_size: int,
+                 dropout: float=0.1,
+                 target_dim: int=80,
+                 sigma_min: float=1e-4,
+                 transformer_type: str='transformer',
+                 hidden_transformer_type: str='conformer',
+                 encode_transformer_type: str='roformer',
+                 nhead: int=4,
+                 pre_kernel_size: int = 3,
+                 hidden_kernel_size: int = 5,
+                 cfg_prob: float=0.2,
+                 guidance_scale: float=1.0,
+                 **kwargs):
+        super().__init__(
+            ppg_dim,
+            encode_dim,
+            spk_emb_size,
+            spk_emb_enc_dim,
+            num_encoder_layers,
+            num_prenet_layers,
+            num_hidden_layers,
+            decoder_num_mid_block,
+            decoder_num_block,
+            pitch_min,
+            pitch_max,
+            pitch_emb_size,
+            dropout,
+            target_dim,
+            sigma_min,
+            transformer_type,
+            hidden_transformer_type,
+            encode_transformer_type,
+            nhead,
+            pre_kernel_size,
+            hidden_kernel_size,
+            **kwargs,
+        )
+
+        del self.cond_channel_mapping
+
+        self.cfm = CFM_CFG(
+            in_channels=target_dim,
+            out_channel=target_dim,
+            n_spks=50,
+            cfm_params={
+                'sigma_min': sigma_min
+            },
+            spk_emb_dim=spk_emb_size + pitch_emb_size + 2,
+            decoder_params={
+                'dropout': dropout,
+                'down_block_type': transformer_type,
+                'mid_block_type': transformer_type,
+                'up_block_type': transformer_type,
+                'n_blocks': decoder_num_block,
+                'num_mid_blocks': decoder_num_mid_block,
+            },
+            cfg_prob=cfg_prob,
+            guidance_scale=guidance_scale,
+        )
+
+    def forward(self,
+                x: torch.Tensor,
+                spk_emb: torch.Tensor,
+                pitch_target: torch.Tensor,
+                v_flag: torch.Tensor,
+                mel_target: torch.Tensor,
+                mel_mask: torch.Tensor,
+                x_mask: torch.Tensor,) \
+        -> torch.Tensor:
+        """
+        Arguments:
+            x: input PPG, shape (B, T_ppg, E)
+            spk_emb: speaker_embedding, shape (B, E_spk)
+            pitch_target: shape (B, T_mel)
+            v_flag: shape (B, T_mel)
+            mel_target: shape (B, T, E),
+            mel_mask: shape (B, T), bool tensor
+            x_mask: optional mask for input PPG. Shape (B, T_ppg). Could be the same as mel_mask
+        Returns:
+            diffusion loss
+        """
+        B, T = pitch_target.shape
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask.unsqueeze(-1)) # B,T,1 -> B,T,E_p+1
+
+        cond = torch.cat([
+            repeat(spk_emb, 'b e -> b t e', t=T),
+            enc_pitch,
+            torch.zeros((B, T, 1)).to(enc_pitch)
+        ], dim=-1) # B,T,E'+E_p+2
+
+        cond_enc = cond.masked_fill(mel_mask.unsqueeze(-1), 0.0)
+
+        #! Get hidden representations of PPG
+        ppg_hidden = self.ppg_encoder.forward(
+            x=x,
+            x_mask=x_mask,
+        )
+
+        #! Upsample ppg_hidden to pitch time resolution
+        z = nn.functional.interpolate(
+            ppg_hidden.permute(0,2,1),
+            size=T,
+            mode='nearest',
+        ).transpose(-1,-2).masked_fill(mel_mask.unsqueeze(-1), 0.0)
+
+        #! Map PPG hidden to mel channels
+        mu = self.channel_mapping(z, mel_mask.unsqueeze(-1))
+
+        if mu.size(1) % 2 == 1:
+            mu, mel_mask, cond_enc, mel_target = self._pad_to_even(
+                mu,
+                mel_mask.unsqueeze(-1),
+                cond_enc,
+                mel_target
+            )
+        else:
+            mel_mask = mel_mask.unsqueeze(-1)
+
+        loss, _ = self.cfm.compute_loss(
+            x1=mel_target.transpose(-1, -2),
+            mu=mu.transpose(-1, -2),
+            mask=~mel_mask.transpose(-1, -2),
+            spks=cond_enc.transpose(-1, -2),
+        )
+
+        return loss
+    
+    @torch.no_grad()
+    def synthesis(self,
+                  x: torch.Tensor,
+                  spk_emb: torch.Tensor,
+                  pitch_target: torch.Tensor,
+                  v_flag: torch.Tensor,
+                  mel_mask: torch.Tensor,
+                  diff_steps: int=300,
+                  temperature: float=0.667,
+                  x_mask: torch.Tensor = None,) \
+        -> torch.Tensor:
+        """
+        Arguments:
+            x: input PPG, shape (B, T_ppg, E)
+            spk_emb: speaker_embedding, shape (B, E_spk)
+            pitch_target: shape (B, T_mel)
+            v_flag: shape (B, T_mel)
+            mel_mask: shape (B, T), bool tensor
+            x_mask: optional mask for input PPG. Shape (B, T_ppg). Could be the same as mel_mask
+        Returns:
+            pred_mel: shape (B, T, 80)
+        """
+        pad_to_odd = False
+        B, T = pitch_target.shape
+        enc_pitch = self.pitch_encoder(pitch_target, v_flag, mel_mask.unsqueeze(-1)) # B,T,1 -> B,T,E_p+1
+
+        cond = torch.cat([
+            repeat(spk_emb, 'b e -> b t e', t=T),
+            enc_pitch,
+            torch.zeros((B, T, 1)).to(enc_pitch)
+        ], dim=-1) # B,T,E'+E_p+2
+
+        cond_enc = cond.masked_fill(mel_mask.unsqueeze(-1), 0.0)
 
         #! Get hidden representations of PPG
         ppg_hidden = self.ppg_encoder.forward(

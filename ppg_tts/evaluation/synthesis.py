@@ -80,6 +80,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
     )
 
+    parser.add_argument(
+        '--guidance_scale',
+        type=float,
+        default=1.0,
+    )
+
     return parser
 
 def replace_spk_emb(testset: ExtendDataset, curr_idx: int) -> Tuple[str, torch.Tensor]:
@@ -113,10 +119,11 @@ if __name__ == "__main__":
 
     device = args.device if torch.cuda.is_available() else 'cpu'
 
-    logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {device}")
+    logger.info(f"Load {args.model_class} checkpoint from {args.ckpt}, device is {device}, guidance scale is {args.guidance_scale}")
     model_cls = import_obj_from_string(args.model_class)
     model, diff_steps, temperature = load_model(model_cls, args.ckpt, device)
     model = model.to(device)
+    model.cfm.guidance_scale = args.guidance_scale
     exp_dir = Path(args.ckpt).parent.parent
 
     logger.info(f"Load testset from {args.data_dir}")

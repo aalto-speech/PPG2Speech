@@ -212,7 +212,7 @@ class ExtendDataset(BaseDataset):
             mel_scale="slaney"
         )
 
-        ppg = torch.from_numpy(self.ppgs[key].copy())
+        ppg = torch.from_numpy(self.ppgs[key].copy())[:, :32]
 
         if self.ppg_sparse is not None:
             ppg = self.sparse_func(ppg.unsqueeze(0), self.sparse_coeff).squeeze(0)
