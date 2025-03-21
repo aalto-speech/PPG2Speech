@@ -37,36 +37,36 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
 
         cd vocoder/bigvgan
         python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
-            --input_mels_dir ${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway} \
-            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/flip_generate_wav_${test_dir}_$vocoder_gd${guidance}_sw${sway}
+            --input_mels_dir "${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway}" \
+            --output_dir "${exp_dir[$SLURM_ARRAY_TASK_ID]}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
 
         cd $curr_dir
     else
         python -m vocoder.hifigan.inference_e2e \
             --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
-            --input_mels_dir ${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway} \
-            --output_dir ${exp_dir}/flip_generate_wav_${test_dir}_$vocoder_gd${guidance}_sw${sway}
+            --input_mels_dir "${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway}" \
+            --output_dir "${exp_dir}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
     fi
-    cp ${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway}/speaker_mapping \
-        ${exp_dir}/flip_generate_wav_${test_dir}_$vocoder_gd${guidance}_sw${sway}/speaker_mapping
+    cp "${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway}/speaker_mapping" \
+        "${exp_dir}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}/speaker_mapping"
 fi
 
 if [ $start -le 2 ] && [ $end -ge 2 ]; then
     echo "Calculate speaker embedding distance between original target speaker wavs and generated target speaker wavs"
 
     python -m ppg_tts.evaluation.evaluate_spk_emb --data_dir ${testset} \
-        --flip_wav_dir ${exp_dir}/flip_generate_wav_${test_dir}_$vocoder_gd${guidance}_sw${sway} \
+        --flip_wav_dir "${exp_dir}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}" \
         --device ${device}
 fi
 
 if [ $start -le 3 ] && [ $end -ge 3 ]; then
     echo "Evaluate WER & CER on the synthesized speech"
     python -m ppg_tts.evaluation.evaluate_wer --data_dir ${testset} \
-        --flip_wav_dir ${exp_dir}/flip_generate_wav_${test_dir}_$vocoder_gd${guidance}_sw${sway}
+        --flip_wav_dir "${exp_dir}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
 fi
 
 if [ $start -le 4 ] && [ $end -ge 4 ]; then
     echo "Evaluate MOS score on the synthesized speech"
     python -m ppg_tts.evaluation.mos_eval \
-        --flip_wav_dir ${exp_dir}/flip_generate_wav_${test_dir}_$vocoder_gd${guidance}_sw${sway}
+        --flip_wav_dir "${exp_dir}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
 fi
