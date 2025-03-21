@@ -1,8 +1,11 @@
+import os
+import numpy as np
+import random
 import torch
 import torchaudio
-import os
 from ..utils import build_parser, remove_punc_and_tolower
 from loguru import logger
+from scipy import stats
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 from torchmetrics.functional.text import word_error_rate, char_error_rate
 
@@ -54,6 +57,29 @@ def read_wav_text(wav_dir: str, text_file: str):
 
         yield x, key2text[key], key
 
+def sample_paired_and_eval(list1, list2, sample_size, n, cal_metrics):
+    assert len(list1) == len(list2), "Lists must be of the same length."
+
+    metrics = []
+
+    for _ in range(n):
+        indices = random.sample(range(len(list1)), sample_size)
+        sample1 = [list1[i] for i in indices]
+        sample2 = [list2[i] for i in indices]
+
+        metric = cal_metrics(sample1, sample2)
+        metrics.append(metric)
+
+    mean_metric = np.mean(metrics)
+    ci_low, ci_high = stats.t.interval(
+        confidence=0.95,
+        df=n-1,
+        loc=mean_metric,
+        scale=stats.sem(metrics)
+    )
+
+    return mean_metric, (ci_low, ci_high)
+
 if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
@@ -90,8 +116,8 @@ if __name__ == "__main__":
 
             logger.info(f"{utterance[-1]}:\nref: {text}\nhyp: {predicted_trans}\n")
     
-    wer = word_error_rate(pred, ref)
+    wer, wer_ci = sample_paired_and_eval(pred, ref, 30, 20, word_error_rate)
 
-    cer = char_error_rate(pred, ref)
+    cer, cer_ci = sample_paired_and_eval(pred, ref, 30, 20, char_error_rate)
 
-    logger.info(f"Evaluating utterances in {args.flip_wav_dir}, WER {wer.item()}, CER {cer.item()}")
+    logger.info(f"Evaluating utterances in {args.flip_wav_dir}, WER {wer.item()} {wer_ci}, CER {cer.item()} {cer_ci}")
