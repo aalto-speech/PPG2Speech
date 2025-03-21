@@ -549,6 +549,7 @@ class PPGMatchaCFG(PPGMatchaV2):
                  hidden_kernel_size: int = 5,
                  cfg_prob: float=0.2,
                  guidance_scale: float=1.0,
+                 drop_ppg: bool=False,
                  **kwargs):
         super().__init__(
             ppg_dim,
@@ -595,6 +596,7 @@ class PPGMatchaCFG(PPGMatchaV2):
             },
             cfg_prob=cfg_prob,
             guidance_scale=guidance_scale,
+            drop_ppg=drop_ppg,
         )
 
     def forward(self,

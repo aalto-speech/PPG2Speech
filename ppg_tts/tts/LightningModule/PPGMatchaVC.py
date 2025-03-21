@@ -38,6 +38,7 @@ class PPGMatchaVC(L.LightningModule):
                  warmup_steps: int = 50000,
                  cfg_prob: float = 0.2,
                  guidance_scale: float = 1.0,
+                 drop_ppg: bool = False,
                  **kwargs):
         super().__init__()
 
@@ -80,6 +81,7 @@ class PPGMatchaVC(L.LightningModule):
             pre_kernel_size=pre_kernel_size,
             cfg_prob=cfg_prob,
             guidance_scale=guidance_scale,
+            drop_ppg=drop_ppg,
         )
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):

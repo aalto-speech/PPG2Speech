@@ -68,7 +68,7 @@ model:
     num_encoder_layers: 4
     num_prenet_layers: 3
     num_hidden_layers: 2
-    decoder_num_mid_block: 3
+    decoder_num_mid_block: 2
     decoder_num_block: 1
     pitch_emb_size: 16
     dropout: 0.1
@@ -88,6 +88,7 @@ model:
     warmup_steps: 50000
     cfg_prob: 0.2
     guidance_scale: 1.0
+    drop_ppg: false
 optimizer: null
 lr_scheduler: null
 ckpt_path: null

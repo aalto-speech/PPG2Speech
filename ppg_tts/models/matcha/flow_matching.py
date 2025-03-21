@@ -138,7 +138,8 @@ class CFM_CFG(CFM):
                  spk_emb_dim=64,
                  cfg_prob=0.2,
                  guidance_scale=1,
-                 sway_coeff: float=-1,):
+                 sway_coeff: float=-1,
+                 drop_ppg: bool=False):
         super().__init__(in_channels, out_channel, cfm_params, decoder_params, n_spks, spk_emb_dim)
 
         self.cfg_prob = cfg_prob
@@ -149,6 +150,8 @@ class CFM_CFG(CFM):
             raise ValueError(f"s must be in [-1, pi/2 - 1], got {sway_coeff}")
         
         self.sway_coeff = sway_coeff
+
+        self.drop_ppg = drop_ppg
 
     def sway_sampling(self, u: torch.Tensor) -> torch.Tensor:
         term = torch.cos(torch.pi / 2 * u) - 1 + u
@@ -180,7 +183,11 @@ class CFM_CFG(CFM):
             eps_cond = self.estimator(x, mask, mu, t, spks, cond)
             # Compute unconditional prediction by replacing spks with zeros
             null_spks = torch.zeros_like(spks)
-            eps_uncond = self.estimator(x, mask, mu, t, null_spks, cond)
+            if self.drop_ppg:
+                null_mu = torch.zeros_like(mu)
+                eps_uncond = self.estimator(x, mask, null_mu, t, null_spks, cond)
+            else:
+                eps_uncond = self.estimator(x, mask, mu, t, null_spks, cond)
             dphi_dt = eps_uncond + self.guidance_scale * (eps_cond - eps_uncond)
 
             x = x + dt * dphi_dt
@@ -216,6 +223,9 @@ class CFM_CFG(CFM):
             drop_mask = drop_mask.view(b, 1, 1)
             # Replace spks with zero for those examples
             spks = spks * (1 - drop_mask)
+
+            if self.drop_ppg:
+                mu = mu * (1 - drop_mask)
 
         # Random timestep
         t_rand = torch.rand([b, 1, 1], device=mu.device, dtype=mu.dtype)
