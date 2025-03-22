@@ -120,4 +120,7 @@ if __name__ == "__main__":
 
     cer, cer_ci = sample_paired_and_eval(pred, ref, 30, 20, char_error_rate)
 
-    logger.info(f"Evaluating utterances in {args.flip_wav_dir}, WER {wer.item()} {wer_ci}, CER {cer.item()} {cer_ci}")
+    format_ci = lambda x: f"({x[0]*100:.2f}, {x[1]*100:.2f})"
+
+    logger.info(f"Evaluating utterances in {args.flip_wav_dir}, WER {wer.item()*100:.2f} {format_ci(wer_ci)}"
+                f" CER {cer.item()*100:.2f} {format_ci(cer_ci)}")
