@@ -116,9 +116,9 @@ if __name__ == "__main__":
 
             logger.info(f"{utterance[-1]}:\nref: {text}\nhyp: {predicted_trans}\n")
     
-    wer, wer_ci = sample_paired_and_eval(pred, ref, 30, 20, word_error_rate)
+    wer, wer_ci = sample_paired_and_eval(pred, ref, 50, 20, word_error_rate)
 
-    cer, cer_ci = sample_paired_and_eval(pred, ref, 30, 20, char_error_rate)
+    cer, cer_ci = sample_paired_and_eval(pred, ref, 50, 20, char_error_rate)
 
     format_ci = lambda x: f"({x[0]*100:.2f}, {x[1]*100:.2f})"
 

@@ -9,6 +9,38 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import math
 
+def visualize_ppg_save(ppg, output_file, figsize=(10, 4)):
+    """
+    Visualize a single Phonetic Posteriorgram (PPG) and save it to a file
+    with a wider and shorter layout.
+
+    Parameters:
+    -----------
+    ppg : numpy.ndarray
+        A 2D array representing the phonetic posterior probabilities.
+    output_file : str
+        Path to the file where the image will be saved.
+    figsize : tuple, optional
+        The size of the figure in inches (width, height). Default is (12, 4).
+    """
+    # Create a figure with the desired dimensions.
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot the PPG.
+    ax.imshow(ppg, aspect='auto', origin='lower', interpolation='nearest', cmap='viridis')
+
+    # Remove ticks and axis labels.
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.axis('off')
+
+    # Remove extra white space.
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    # Save the image and close the figure.
+    plt.savefig(output_file, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
 def visualize_multiple_ppg(ppg_list, titles=None, figsize=(20, 12), save_path='./figure.png', 
                            y_labels_map=None, highlight_ranges=None):
     """
@@ -66,74 +98,80 @@ def visualize_multiple_ppg(ppg_list, titles=None, figsize=(20, 12), save_path='.
 
 
 if __name__ == '__main__':
-    key = sys.argv[1]
+    key = '14_test_0012'
+    ppgs = load_scp('data/spk_sanity/ppg.scp')
 
-    label_map = {
-        "<eps>": 0,
-        "SIL": 1,
-        "SPN": 2,
-        "a": 3,
-        "b": 4,
-        "c": 5,
-        "d": 6,
-        "e": 7,
-        "f": 8,
-        "g": 9,
-        "h": 10,
-        "i": 11,
-        "j": 12,
-        "k": 13,
-        "l": 14,
-        "m": 15,
-        "n": 16,
-        "o": 17,
-        "p": 18,
-        "q": 19,
-        "r": 20,
-        "s": 21,
-        "t": 22,
-        "u": 23,
-        "v": 24,
-        "w": 25,
-        "x": 26,
-        "y": 27,
-        "z": 28,
-        "ä": 29,
-        "å": 30,
-        "ö": 31,
-    }
+    ppg = ppgs[key][:, :32].T
 
-    kaldi_ppgs = load_scp('data/spk_sanity/ppg.scp')
-    edit_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/ppg.scp')
-    synthesized_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_hifigan/kaldi_dataset/ppg.scp')
-    baseline_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_baseline_hifigan/kaldi_dataset/ppg.scp')
+    visualize_ppg_save(ppg, './ppg.png')
+    # key = sys.argv[1]
 
-    baseline_gt_ppgs = load_scp('eval_baseline/kaldi_dataset/ppg.scp')
+    # label_map = {
+    #     "<eps>": 0,
+    #     "SIL": 1,
+    #     "SPN": 2,
+    #     "a": 3,
+    #     "b": 4,
+    #     "c": 5,
+    #     "d": 6,
+    #     "e": 7,
+    #     "f": 8,
+    #     "g": 9,
+    #     "h": 10,
+    #     "i": 11,
+    #     "j": 12,
+    #     "k": 13,
+    #     "l": 14,
+    #     "m": 15,
+    #     "n": 16,
+    #     "o": 17,
+    #     "p": 18,
+    #     "q": 19,
+    #     "r": 20,
+    #     "s": 21,
+    #     "t": 22,
+    #     "u": 23,
+    #     "v": 24,
+    #     "w": 25,
+    #     "x": 26,
+    #     "y": 27,
+    #     "z": 28,
+    #     "ä": 29,
+    #     "å": 30,
+    #     "ö": 31,
+    # }
 
-    with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/edits.json", 'r') as reader:
-        edits_json = json.load(reader)
+    # kaldi_ppgs = load_scp('data/spk_sanity/ppg.scp')
+    # edit_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/ppg.scp')
+    # synthesized_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_hifigan/kaldi_dataset/ppg.scp')
+    # baseline_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_baseline_hifigan/kaldi_dataset/ppg.scp')
 
-    with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/matcha_edits.json", 'r') as reader:
-        matcha_json = json.load(reader)
+    # baseline_gt_ppgs = load_scp('eval_baseline/kaldi_dataset/ppg.scp')
 
-    kaldi_example = kaldi_ppgs[key]
+    # with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/edits.json", 'r') as reader:
+    #     edits_json = json.load(reader)
 
-    edit = edit_ppgs[key]
+    # with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/matcha_edits.json", 'r') as reader:
+    #     matcha_json = json.load(reader)
 
-    synthe = synthesized_ppgs[key]
+    # kaldi_example = kaldi_ppgs[key]
 
-    baseline_gt = baseline_gt_ppgs[key]
+    # edit = edit_ppgs[key]
 
-    ppgs = [kaldi_example[:, :32], edit[:, :32], synthe[:, :32], baseline_ppgs[key][:, :32], baseline_gt[:, :32]]
-    titles = ['original ppg', 'ppg after editing', 'synthesized ppg', 'ppg from tts baseline', 'ppg from tts baseline without editing']
+    # synthe = synthesized_ppgs[key]
 
-    highlights = [edits_json[key]["edit_region"], edits_json[key]["edit_region"], 
-                  edits_json[key]["edit_region"], matcha_json[key]["edit_region"],
-                  [matcha_json[key]["edit_region"][0], matcha_json[key]["edit_region"][1]]]
+    # baseline_gt = baseline_gt_ppgs[key]
 
-    visualize_multiple_ppg(
-        ppgs, titles, 
-        save_path=f"exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/{key}.png",
-        y_labels_map={v: k for k, v in label_map.items()},
-        highlight_ranges=highlights,
-    )
+    # ppgs = [kaldi_example[:, :32], edit[:, :32], synthe[:, :32], baseline_ppgs[key][:, :32], baseline_gt[:, :32]]
+    # titles = ['original ppg', 'ppg after editing', 'synthesized ppg', 'ppg from tts baseline', 'ppg from tts baseline without editing']
+
+    # highlights = [edits_json[key]["edit_region"], edits_json[key]["edit_region"], 
+    #               edits_json[key]["edit_region"], matcha_json[key]["edit_region"],
+    #               [matcha_json[key]["edit_region"][0], matcha_json[key]["edit_region"][1]]]
+
+    # visualize_multiple_ppg(
+    #     ppgs, titles, 
+    #     save_path=f"exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/{key}.png",
+    #     y_labels_map={v: k for k, v in label_map.items()},
+    #     highlight_ranges=highlights,
+    # )

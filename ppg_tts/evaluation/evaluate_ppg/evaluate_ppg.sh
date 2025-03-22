@@ -60,34 +60,29 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
 fi
 
 
-# if [ $start -le 2 ] && [ $end -ge 2 ]; then
-#     echo "Step 2: Inference TTS-baseline for edited text";
+if [ $start -le 2 ] && [ $end -ge 2 ]; then
+    echo "Step 2: Inference TTS-baseline for edited text";
 
-#     srun python ppg_tts/evaluation/evaluate_ppg/tts_baseline/inference_matcha.py \
-#         ppg_tts/evaluation/evaluate_ppg/tts_baseline/matcha_hifigan.onnx \
-#         --file ${exp_dir}/editing/text \
-#         --spk ${testset}/embedding.scp \
-#         --output-dir ${exp_dir}/editing/wav_baseline_${test_dir}_$vocoder
-# fi
-
-if [ $start -le 3 ] && [ $end -ge 3 ]; then
-    echo "Step 3: Extract PPG from synthesized speech"
-
-    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder";
-
-    ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
-        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder \
-        --text_file ${exp_dir}/editing_${test_dir}${flag}/text
-
-    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}";
+    curr_dir=$(pwd)
     
-    ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
-        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway} \
-        --text_file ${exp_dir}/editing_${test_dir}${flag}/text
+    cd ${baseline_tts_proj}
+
+    echo "Start Inference for the model"
+
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_infer.out \
+        ${baseline_tts_proj}/sbatch_scripts/inference.sh \
+        ${exp_dir}/editing_${test_dir}${flag}/text \
+        ${testset}/embedding.scp \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder_gd${guidance}_sw${sway}
+
+    cd $curr_dir
+
+    awk '{print $1 ' ' $1}' ${exp_dir}/editing_${test_dir}${flag}/text \
+        > ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder_gd${guidance}_sw${sway}/speaker_mapping
 fi
 
-if [ $start -le 4 ] && [ $end -ge 4 ]; then
-    echo "Step 4: Extract duration/alignment from baseline TTS model";
+if [ $start -le 3 ] && [ $end -ge 3 ]; then
+    echo "Step 3: Extract duration/alignment from baseline TTS model";
 
     echo "....Make wavlist for baseline TTS inference";
 
@@ -101,8 +96,8 @@ if [ $start -le 4 ] && [ $end -ge 4 ]; then
 
     cd ${baseline_tts_proj}
 
-    sbatch --wait --output=${exp_dir}/editing_${test_dir}/baseline_tts_align.out \
-        ${baseline_tts_proj}/sbatch_scripts/inference.sh \
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_align.out \
+        ${baseline_tts_proj}/sbatch_scripts/alignment.sh \
         ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder/matcha_duration \
         ${exp_dir}/editing_${test_dir}${flag}/wavlist
 
@@ -117,6 +112,22 @@ if [ $start -le 4 ] && [ $end -ge 4 ]; then
         --matcha_alignment_folder ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder/matcha_duration \
         --output_json ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
 
+fi
+
+if [ $start -le 4 ] && [ $end -ge 4 ]; then
+    echo "Step 4: Extract PPG from synthesized speech"
+
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder";
+
+    ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder \
+        --text_file ${exp_dir}/editing_${test_dir}${flag}/text
+
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}";
+    
+    ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway} \
+        --text_file ${exp_dir}/editing_${test_dir}${flag}/text
 fi
 
 if [ $start -le 5 ] && [ $end -ge 5 ]; then
