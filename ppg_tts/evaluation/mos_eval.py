@@ -20,7 +20,7 @@ def read_wav_scp(scp: str):
 def read_wav(wav_dir: str):
     wavs = os.listdir(wav_dir)
 
-    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e" in wav]
+    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e.wav" in wav]
 
     for wav in wavs:
         key = wav.split('/')[-1].replace('_generated_e2e.wav', '')

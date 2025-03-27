@@ -35,7 +35,7 @@ def read_wav_scp_text(scp: str, text: str):
 def read_wav_text(wav_dir: str, text_file: str):
     wavs = os.listdir(wav_dir)
 
-    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e" in wav]
+    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e.wav" in wav]
 
     with open(text_file, "r") as reader:
         lines = reader.readlines()
