@@ -27,6 +27,8 @@ else
     flag=""
 fi
 
+set -e
+set -o pipefail
 
 if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Step 0: Generating mels with edited PPGs"
@@ -46,17 +48,17 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
         cd vocoder/bigvgan
         python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
             --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
-            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}
+            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}
 
         cd $curr_dir
     else
         python -m vocoder.hifigan.inference_e2e \
             --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
             --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
-            --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}
+            --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}
     fi
     cp ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway}/speaker_mapping \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}/speaker_mapping
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/speaker_mapping
 fi
 
 
@@ -67,18 +69,19 @@ if [ $start -le 2 ] && [ $end -ge 2 ]; then
     
     cd ${baseline_tts_proj}
 
-    echo "Start Inference for the model"
+    echo "Start Inference for the model on ${testset}"
 
-    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_infer.out \
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_infer_%A.out \
         ${baseline_tts_proj}/sbatch_scripts/inference.sh \
         ${exp_dir}/editing_${test_dir}${flag}/text \
         ${testset}/embedding.scp \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder_gd${guidance}_sw${sway}
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
+        ${guidance} ${sway}
 
     cd $curr_dir
 
-    awk '{print $1 ' ' $1}' ${exp_dir}/editing_${test_dir}${flag}/text \
-        > ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder_gd${guidance}_sw${sway}/speaker_mapping
+    awk '{print $1 " " $1}' ${exp_dir}/editing_${test_dir}${flag}/text \
+        > ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/speaker_mapping
 fi
 
 if [ $start -le 3 ] && [ $end -ge 3 ]; then
@@ -96,9 +99,9 @@ if [ $start -le 3 ] && [ $end -ge 3 ]; then
 
     cd ${baseline_tts_proj}
 
-    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_align.out \
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_align_%A.out \
         ${baseline_tts_proj}/sbatch_scripts/alignment.sh \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder/matcha_duration \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/matcha_duration \
         ${exp_dir}/editing_${test_dir}${flag}/wavlist
 
     echo "....Duration/Alignment extraction done, change back to ${curr_dir}"
@@ -109,7 +112,7 @@ if [ $start -le 3 ] && [ $end -ge 3 ]; then
 
     python ppg_tts/evaluation/evaluate_ppg/transform_matcha_alignment.py \
         --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
-        --matcha_alignment_folder ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder/matcha_duration \
+        --matcha_alignment_folder ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/matcha_duration \
         --output_json ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
 
 fi
@@ -117,16 +120,16 @@ fi
 if [ $start -le 4 ] && [ $end -ge 4 ]; then
     echo "Step 4: Extract PPG from synthesized speech"
 
-    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder";
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}";
 
     ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
-        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
         --text_file ${exp_dir}/editing_${test_dir}${flag}/text
 
-    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}";
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}";
     
     ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
-        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway} \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway} \
         --text_file ${exp_dir}/editing_${test_dir}${flag}/text
 fi
 
@@ -136,14 +139,14 @@ if [ $start -le 5 ] && [ $end -ge 5 ]; then
     echo "Evaluating PPG from model synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
-        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_$vocoder_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
+        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
         --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json
 
     
     echo "\nEvaluating PPG from TTS-baseline synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
-        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_$vocoder/kaldi_dataset/ppg.scp \
+        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
         --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
         --matcha_aligned_edits ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
 fi

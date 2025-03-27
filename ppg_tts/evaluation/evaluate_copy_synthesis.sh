@@ -19,6 +19,9 @@ end="${9:-6}"
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 test_dir=$(basename ${testset})
 
+set -e
+set -o pipefail
+
 if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Generating mels with the same speaker identity"
 

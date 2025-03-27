@@ -4,7 +4,6 @@ from argparse import ArgumentParser
 from fastdtw import fastdtw
 from kaldiio import load_scp
 from pathlib import Path
-from scipy.stats import wasserstein_distance
 from scipy.spatial.distance import jensenshannon
 from loguru import logger
 
@@ -54,12 +53,11 @@ if __name__ == '__main__':
         with open(args.matcha_aligned_edits, 'r') as reader:
             matcha_aligned_edits = json.load(reader)
 
-    logger.info(f"Start Evaluating Jensen-Shannon Divergence and Wasserstein Distance"
+    logger.info(f"Start Evaluating Jensen-Shannon Divergence"
                 f"for {Path(args.synthesized_ppg).parent.parent.as_posix()}.")
 
     num_frames = 0
     average_jsd = 0
-    average_wass = 0
     for i, key in enumerate(synthesized_ppg_dict):
         source_edit_ppg = edited_ppg_dict[key]
         synthesize_ppg = synthesized_ppg_dict[key]
@@ -81,29 +79,22 @@ if __name__ == '__main__':
             synthesized_editing = synthesize_ppg[matcha_region]
             matcha_frames = (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
             source_frames = (edited_region[1] - edited_region[0])
-            num_frames = source_frames # min(matcha_frames, source_frames)
+            num_frames = source_frames
         else:
             synthesized_editing = synthesize_ppg[region_slice]
             num_frames = (edited_region[1] - edited_region[0])
 
-        jsd, _ = fastdtw(source_region, synthesized_editing, 10, jensenshannon)
-
-        wasserstein, _ = fastdtw(source_region, synthesized_editing, 10, wasserstein_distance)
+        jsd, _ = fastdtw(source_region, synthesized_editing[:, :32], 10, jensenshannon)
 
         #! Filter Possibly invalid results
-        if jsd == 0.0 or wasserstein == 0.0:
+        if jsd == 0.0:
             logger.warning(f"{key}: invalid cost computation")
             num_invalid += 1
             continue
         else:
-            logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}, wasserstein distance: {wasserstein}")
+            logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}")
         average_jsd += ((jsd / num_frames) - average_jsd) / (i - num_invalid + 1)
-        average_wass += ((wasserstein / num_frames) - average_jsd) / (i - num_invalid + 1)
 
     logger.info(
         f"Inference done. Average frame-level jensen-shannon divergence: {average_jsd / num_frames}"
     )
-
-    logger.info(
-        f"Inference done. Average wasserstein distance: {average_wass / num_frames}"
-    ) 
