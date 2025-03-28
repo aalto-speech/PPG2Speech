@@ -1,5 +1,5 @@
+import os
 import json
-import numpy as np
 from argparse import ArgumentParser
 from fastdtw import fastdtw
 from kaldiio import load_scp
@@ -31,6 +31,12 @@ def parse_args():
         default=None,
     )
 
+    parser.add_argument(
+        '--matcha_mfa_align',
+        type=str,
+        default=None,
+    )
+
     args = parser.parse_args()
 
     return args
@@ -38,6 +44,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
+    if args.matcha_aligned_edits and args.matcha_mfa_align:
+        raise ValueError("Please provide either matcha_aligned_edits or matcha_mfa_align, not both.")
     log_path = Path(args.synthesized_ppg).parent / 'log'
 
     logger.add(f"{log_path.as_posix()}/ppg_evaluate.log", rotation='200 MB')
@@ -78,8 +86,24 @@ if __name__ == '__main__':
             )
             synthesized_editing = synthesize_ppg[matcha_region]
             matcha_frames = (matcha_aligned_edits[key]["edit_region"][1] - matcha_aligned_edits[key]["edit_region"][0])
-            source_frames = (edited_region[1] - edited_region[0])
-            num_frames = source_frames
+            num_frames = (edited_region[1] - edited_region[0])
+        elif args.matcha_mfa_align is not None:
+            spk = key.split("_")[0]
+            alignment_json_path = os.path.join(
+                args.matcha_mfa_align,
+                spk,
+                f"{key}.json"
+            )
+
+            with open(alignment_json_path, 'r') as reader:
+                alignment_data = json.load(reader)['tiers']
+            entry_idx = edit_details[key]['pos_in_str'] \
+                - edit_details[key]['new_text'].count(" ")
+            entry = alignment_data['phones']['entries'][entry_idx]
+
+            start_frame, end_frame = int(entry[0] * 100), int(entry[1] * 100)
+            synthesized_editing = synthesize_ppg[start_frame:end_frame]
+            num_frames = (edited_region[1] - edited_region[0])
         else:
             synthesized_editing = synthesize_ppg[region_slice]
             num_frames = (edited_region[1] - edited_region[0])
