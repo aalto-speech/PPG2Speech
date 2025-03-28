@@ -23,19 +23,23 @@ See `ppg_tts/evaluation/evaluate_switch_speaker.sh`
 
 #### 1. Synthesize with 1 character's prob switch to another character
 First, use alignment to select editing region:
-- [ ] greedy decoding/kaldi alignment and dtw to align with text
-- [ ] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
-- [ ] Return edited text and PPG
+- [x] Use dtw to find alignment between ppg and text
+- [x] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
+- [x] Return edited text and PPG
 
 #### 2. Synthesize edited text with Matcha-TTS baseline
-Move the ONNX inference code here and use ONNX runtime
+- [x] Move the ONNX inference code here and use ONNX runtime
 
 #### 3. Synthesize edited PPG with the model
+- [x] Add editing ppg option and editor to `ppg_tts/evaluation/synthesis.py`
 
 #### 4. Evaluate Kaldi PPG/pdf-post
 
 Extract PPG/pdf-post for TTS speech and PPG-synthesized speech.
-Evaluate frame-level [Jennsen-Shannon Divergence](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html) and [Wasserstein distance](https://docs.scipy.org/doc/scipy-1.15.2/reference/generated/scipy.stats.wasserstein_distance_nd.html) in the editied region.
+
+Extract Alignment from TTS baseline.
+
+Evaluate DTW cost using [Jennsen-Shannon Divergence](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html) and [Wasserstein distance](https://docs.scipy.org/doc/scipy-1.15.2/reference/generated/scipy.stats.wasserstein_distance_nd.html) in the editied region (using DTW to deal with frame alignment issue).
 
 
 ## Training

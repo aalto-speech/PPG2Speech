@@ -1,8 +1,11 @@
+import os
+import numpy as np
+import random
 import torch
 import torchaudio
-import os
 from ..utils import build_parser, remove_punc_and_tolower
 from loguru import logger
+from scipy import stats
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 from torchmetrics.functional.text import word_error_rate, char_error_rate
 
@@ -32,7 +35,7 @@ def read_wav_scp_text(scp: str, text: str):
 def read_wav_text(wav_dir: str, text_file: str):
     wavs = os.listdir(wav_dir)
 
-    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e" in wav]
+    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e.wav" in wav]
 
     with open(text_file, "r") as reader:
         lines = reader.readlines()
@@ -54,6 +57,29 @@ def read_wav_text(wav_dir: str, text_file: str):
 
         yield x, key2text[key], key
 
+def sample_paired_and_eval(list1, list2, sample_size, n, cal_metrics):
+    assert len(list1) == len(list2), "Lists must be of the same length."
+
+    metrics = []
+
+    for _ in range(n):
+        indices = random.sample(range(len(list1)), sample_size)
+        sample1 = [list1[i] for i in indices]
+        sample2 = [list2[i] for i in indices]
+
+        metric = cal_metrics(sample1, sample2)
+        metrics.append(metric)
+
+    mean_metric = np.mean(metrics)
+    ci_low, ci_high = stats.t.interval(
+        confidence=0.95,
+        df=n-1,
+        loc=mean_metric,
+        scale=stats.sem(metrics)
+    )
+
+    return mean_metric, (ci_low, ci_high)
+
 if __name__ == "__main__":
     parser = build_parser()
     args = parser.parse_args()
@@ -63,6 +89,11 @@ if __name__ == "__main__":
     processor = Wav2Vec2Processor.from_pretrained(args.asr_pretrained)
     model = Wav2Vec2ForCTC.from_pretrained(args.asr_pretrained)
     model = model.to(device)
+
+    logger.add(
+        f"{args.flip_wav_dir}/logs/wer_cer.log",
+        rotation='200 MB'
+    )
 
     logger.info(f"Evaluating WER on {args.flip_wav_dir}, transcripts in {args.data_dir}/text.")
 
@@ -85,8 +116,11 @@ if __name__ == "__main__":
 
             logger.info(f"{utterance[-1]}:\nref: {text}\nhyp: {predicted_trans}\n")
     
-    wer = word_error_rate(pred, ref)
+    wer, wer_ci = sample_paired_and_eval(pred, ref, 50, 20, word_error_rate)
 
-    cer = char_error_rate(pred, ref)
+    cer, cer_ci = sample_paired_and_eval(pred, ref, 50, 20, char_error_rate)
 
-    logger.info(f"Evaluating utterances in {args.flip_wav_dir}, WER {wer.item()}, CER {cer.item()}")
+    format_ci = lambda x: f"({x[0]*100:.2f}, {x[1]*100:.2f})"
+
+    logger.info(f"Evaluating utterances in {args.flip_wav_dir}, WER {wer.item()*100:.2f} {format_ci(wer_ci)}"
+                f" CER {cer.item()*100:.2f} {format_ci(cer_ci)}")

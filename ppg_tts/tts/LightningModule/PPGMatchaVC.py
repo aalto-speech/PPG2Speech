@@ -4,7 +4,7 @@ import json
 import lightning as L
 import torch
 import wandb
-from ...models import PPGMatcha
+from ...models import PPGMatcha, PPGMatchaV2, PPGMatchaCFG
 from ...utils import plot_mel, plot_tensor_wandb, WarmupCosineAnnealing
 
 class PPGMatchaVC(L.LightningModule):
@@ -36,6 +36,9 @@ class PPGMatchaVC(L.LightningModule):
                  temperature: float=0.667,
                  lr_scheduler_interval: int = 1500,
                  warmup_steps: int = 50000,
+                 cfg_prob: float = 0.2,
+                 guidance_scale: float = 1.0,
+                 drop_ppg: bool = False,
                  **kwargs):
         super().__init__()
 
@@ -54,7 +57,7 @@ class PPGMatchaVC(L.LightningModule):
         self.lr_scheduler_interval = lr_scheduler_interval
         self.warmup_steps = warmup_steps
 
-        self.model = PPGMatcha(
+        self.model = PPGMatchaCFG(
             ppg_dim=ppg_dim,
             encode_dim=encode_dim,
             spk_emb_size=spk_emb_size,
@@ -76,6 +79,9 @@ class PPGMatchaVC(L.LightningModule):
             nhead=nhead,
             hidden_kernel_size=hidden_kernel_size,
             pre_kernel_size=pre_kernel_size,
+            cfg_prob=cfg_prob,
+            guidance_scale=guidance_scale,
+            drop_ppg=drop_ppg,
         )
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):

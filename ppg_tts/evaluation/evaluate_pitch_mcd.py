@@ -49,10 +49,15 @@ if __name__ == "__main__":
 
     dataset = ExtendDataset(data_dir=args.data_dir)
     mcd_cal = pymcd.Calculate_MCD('dtw_sl')
+
+    logger.add(
+        f"{args.flip_wav_dir}/logs/pitch_mcd.log",
+        rotation='200 MB'
+    )
     
     avg_pitch_mae = 0.0
     average_mcd = 0.0
-    for utt in dataset:
+    for i, utt in enumerate(dataset):
         key = utt['key']
 
         synthesized_wav_path = f"{args.flip_wav_dir}/{key}_generated_e2e.wav"
@@ -63,16 +68,14 @@ if __name__ == "__main__":
             synthesized_wav_path,
         )
 
-        avg_pitch_mae += pitch_mae
+        avg_pitch_mae += (pitch_mae - avg_pitch_mae) / (i + 1)
 
         mcd = mcd_cal.calculate_mcd(source_wav_path, synthesized_wav_path)
-        average_mcd += mcd
+        average_mcd += (mcd - average_mcd) / (i + 1)
 
         logger.info(
             f"{key}: pitch mae is {pitch_mae}, mcd is {mcd}"
         )
 
-    avg_pitch_mae /= len(dataset)
-    average_mcd /= len(dataset)
     logger.info(f"The frame-level average pitch mae is {avg_pitch_mae}")
     logger.info(f"The Averaged MCD score is {average_mcd}")

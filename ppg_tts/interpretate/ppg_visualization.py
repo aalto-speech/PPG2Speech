@@ -1,79 +1,177 @@
 import sys
-import torch
+import json
+import math
 import numpy as np
 import matplotlib.pyplot as plt
-from torch.nn.functional import softmax
 from kaldiio import load_scp
-from ..dataset.generalDataset import sparse_topK, sparse_topK_percent
 
-def visualize_multiple_ppg(ppg_list, titles=None, figsize=(20, 10), save_path='./figure.png'):
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import math
+
+def visualize_ppg_save(ppg, output_file, figsize=(10, 4)):
     """
-    Visualize multiple Phonetic Posteriagrams (PPGs) in one graph.
+    Visualize a single Phonetic Posteriorgram (PPG) and save it to a file
+    with a wider and shorter layout.
+
+    Parameters:
+    -----------
+    ppg : numpy.ndarray
+        A 2D array representing the phonetic posterior probabilities.
+    output_file : str
+        Path to the file where the image will be saved.
+    figsize : tuple, optional
+        The size of the figure in inches (width, height). Default is (12, 4).
+    """
+    # Create a figure with the desired dimensions.
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot the PPG.
+    ax.imshow(ppg, aspect='auto', origin='lower', interpolation='nearest', cmap='viridis')
+
+    # Remove ticks and axis labels.
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.axis('off')
+
+    # Remove extra white space.
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    # Save the image and close the figure.
+    plt.savefig(output_file, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
+def visualize_multiple_ppg(ppg_list, titles=None, figsize=(20, 12), save_path='./figure.png', 
+                           y_labels_map=None, highlight_ranges=None):
+    """
+    Visualize multiple Phonetic Posteriograms (PPGs) in one graph.
 
     Parameters:
     - ppg_list: A list of PPG tensors, each of shape (T, C).
     - titles: A list of titles for each subplot (default: None).
-    - figsize: Size of the entire figure (default: (20, 10)).
+    - figsize: Size of the entire figure (default: (20, 12)).
+    - save_path: Path to save the figure (default: './figure.png').
+    - y_labels_map: Optional dictionary mapping integer indices to string labels for y-axis.
+    - highlight_range: Optional tuple (start, end) to highlight a specific time range with a red box.
     """
     num_ppg = len(ppg_list)
     if titles is None:
         titles = [f"Setting {i+1}" for i in range(num_ppg)]
     
     # Create a figure with subplots
-    fig, axes = plt.subplots(2, 4, figsize=figsize)  # 2 rows, 4 columns
+    fig, axes = plt.subplots(2, math.ceil(num_ppg / 2), figsize=figsize)  # 2 rows, dynamic columns
     axes = axes.ravel()  # Flatten the axes array for easy indexing
     
     # Plot each PPG in a subplot
     for i, (ppg, title) in enumerate(zip(ppg_list, titles)):
         ax = axes[i]
         im = ax.imshow(ppg.T, aspect='auto', cmap='viridis', origin='lower')
-        ax.set_title(title)
-        ax.set_xlabel("Time Steps")
-        ax.set_ylabel("Phoneme Classes")
-        fig.colorbar(im, ax=ax, label='Intensity')
+        ax.set_title(title, fontsize=14)
+        ax.set_xlabel("Time Steps", fontsize=12)
+        
+        if y_labels_map:
+            ax.set_yticks(range(len(y_labels_map)))
+            ax.set_yticklabels([y_labels_map.get(idx, str(idx)) for idx in range(len(y_labels_map))], fontsize=10)
+            ax.yaxis.set_tick_params(labelsize=10)
+        else:
+            ax.set_ylabel("Phoneme Classes", fontsize=12)
+        
+        fig.colorbar(im, ax=ax, label='Intensity', fraction=0.046, pad=0.04)
+        
+        # Highlight the specified range with a red rectangle
+        if highlight_ranges:
+            start, end = highlight_ranges[i]
+            width = end - start
+            height = ppg.shape[1]
+            rect = patches.Rectangle((start, 0), width, height, linewidth=2, edgecolor='red', facecolor='none')
+            ax.add_patch(rect)
     
     # Hide unused subplots
     for i in range(num_ppg, len(axes)):
         axes[i].axis('off')
     
     plt.tight_layout()
+    plt.subplots_adjust(left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.3, hspace=0.4)
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.show()
 
+
+
 if __name__ == '__main__':
-    key = sys.argv[1]
+    key = '14_test_0012'
+    ppgs = load_scp('data/spk_sanity/ppg.scp')
 
-    kaldi_ppgs = load_scp('data/spk_sanity/ppg.scp')
-    nn_ppgs = load_scp('/scratch/elec/t412-speechsynth/DATA/fin-mix/test/ppg_nn_lsm0.2.scp')
+    ppg = ppgs[key][:, :32].T
 
-    kaldi_example = kaldi_ppgs[key]
+    visualize_ppg_save(ppg, './ppg.png')
+    # key = sys.argv[1]
 
-    nn_example = torch.from_numpy(nn_ppgs[key].copy())
+    # label_map = {
+    #     "<eps>": 0,
+    #     "SIL": 1,
+    #     "SPN": 2,
+    #     "a": 3,
+    #     "b": 4,
+    #     "c": 5,
+    #     "d": 6,
+    #     "e": 7,
+    #     "f": 8,
+    #     "g": 9,
+    #     "h": 10,
+    #     "i": 11,
+    #     "j": 12,
+    #     "k": 13,
+    #     "l": 14,
+    #     "m": 15,
+    #     "n": 16,
+    #     "o": 17,
+    #     "p": 18,
+    #     "q": 19,
+    #     "r": 20,
+    #     "s": 21,
+    #     "t": 22,
+    #     "u": 23,
+    #     "v": 24,
+    #     "w": 25,
+    #     "x": 26,
+    #     "y": 27,
+    #     "z": 28,
+    #     "ä": 29,
+    #     "å": 30,
+    #     "ö": 31,
+    # }
 
-    original_nn = softmax(nn_example, dim=-1)
+    # kaldi_ppgs = load_scp('data/spk_sanity/ppg.scp')
+    # edit_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/ppg.scp')
+    # synthesized_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_hifigan/kaldi_dataset/ppg.scp')
+    # baseline_ppgs = load_scp('exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/wav_baseline_hifigan/kaldi_dataset/ppg.scp')
 
-    ppgs = [kaldi_example]
-    titles = ['kaldi ppg']
+    # baseline_gt_ppgs = load_scp('eval_baseline/kaldi_dataset/ppg.scp')
 
-    ppgs.append(original_nn.numpy())
-    titles.append('original nn ppg')
+    # with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/edits.json", 'r') as reader:
+    #     edits_json = json.load(reader)
 
-    ppgs.append(sparse_topK(nn_example.unsqueeze(0), 2).squeeze(0).numpy())
-    titles.append('nn ppg with top2 phonemes')
+    # with open("exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/matcha_edits.json", 'r') as reader:
+    #     matcha_json = json.load(reader)
 
-    ppgs.append(sparse_topK(nn_example.unsqueeze(0), 3).squeeze(0).numpy())
-    titles.append('nn ppg with top3 phonemes')
+    # kaldi_example = kaldi_ppgs[key]
 
-    ppgs.append(sparse_topK(nn_example.unsqueeze(0), 4).squeeze(0).numpy())
-    titles.append('nn ppg with top4 phonemes')
+    # edit = edit_ppgs[key]
 
-    ppgs.append(sparse_topK_percent(nn_example.unsqueeze(0), 0.85).squeeze(0).numpy())
-    titles.append('nn ppg with top 85% prob phonemes')
+    # synthe = synthesized_ppgs[key]
 
-    ppgs.append(sparse_topK_percent(nn_example.unsqueeze(0), 0.9).squeeze(0).numpy())
-    titles.append('nn ppg with top 90% prob phonemes')
+    # baseline_gt = baseline_gt_ppgs[key]
 
-    ppgs.append(sparse_topK_percent(nn_example.unsqueeze(0), 0.95).squeeze(0).numpy())
-    titles.append('nn ppg with top 95% prob phonemes')
+    # ppgs = [kaldi_example[:, :32], edit[:, :32], synthe[:, :32], baseline_ppgs[key][:, :32], baseline_gt[:, :32]]
+    # titles = ['original ppg', 'ppg after editing', 'synthesized ppg', 'ppg from tts baseline', 'ppg from tts baseline without editing']
 
-    visualize_multiple_ppg(ppgs, titles, save_path=f"ppg_tts/interpretate/{key}_lsm0.2.png")
+    # highlights = [edits_json[key]["edit_region"], edits_json[key]["edit_region"], 
+    #               edits_json[key]["edit_region"], matcha_json[key]["edit_region"],
+    #               [matcha_json[key]["edit_region"][0], matcha_json[key]["edit_region"][1]]]
+
+    # visualize_multiple_ppg(
+    #     ppgs, titles, 
+    #     save_path=f"exp6_kaldi-ppgV2_conformer_transformer_4_mid2/editing_spk_sanity_rule_based/{key}.png",
+    #     y_labels_map={v: k for k, v in label_map.items()},
+    #     highlight_ranges=highlights,
+    # )

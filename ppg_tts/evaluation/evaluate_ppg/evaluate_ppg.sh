@@ -1,0 +1,154 @@
+#!/usr/bin/bash
+
+testset=$1
+model_class=$2
+ckpt=$3
+device=$4
+vocoder=$5
+baseline_tts_proj=$6
+rule_based=$7
+
+if [ $# -lt 7 ]; then
+    echo "Usage: $0 <testset> <model_class> <ckpt> <device> <vocoder> <baseline_tts_proj> <rule_based> [<guidance> <sway> <start> <end>]"
+    exit 1
+fi
+
+guidance="${8:-1.0}"
+sway="${9:--1.0}"
+start="${10:-0}"
+end="${11:-5}"
+
+exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
+test_dir=$(basename ${testset})
+
+if [ "$rule_based" = "--rule_based_edit" ]; then
+    flag="_rule_based"
+else
+    flag=""
+fi
+
+set -e
+set -o pipefail
+
+if [ $start -le 0 ] && [ $end -ge 0 ]; then
+    echo "Step 0: Generating mels with edited PPGs"
+
+    python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg ${rule_based} \
+        --guidance ${guidance} --sway_coeff ${sway}
+fi
+
+if [ $start -le 1 ] && [ $end -ge 1 ]; then
+    echo "Step 1: Generating wavs for edited mels"
+
+    if [[ $vocoder == "bigvgan" ]]; then
+
+        curr_dir=$(pwd)
+
+        cd vocoder/bigvgan
+        python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
+            --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
+            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}
+
+        cd $curr_dir
+    else
+        python -m vocoder.hifigan.inference_e2e \
+            --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
+            --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
+            --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}
+    fi
+    cp ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway}/speaker_mapping \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/speaker_mapping
+fi
+
+
+if [ $start -le 2 ] && [ $end -ge 2 ]; then
+    echo "Step 2: Inference TTS-baseline for edited text";
+
+    curr_dir=$(pwd)
+    
+    cd ${baseline_tts_proj}
+
+    echo "Start Inference for the model on ${testset}"
+
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_infer_%A.out \
+        ${baseline_tts_proj}/sbatch_scripts/inference.sh \
+        ${exp_dir}/editing_${test_dir}${flag}/text \
+        ${testset}/embedding.scp \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
+        ${guidance} ${sway}
+
+    cd $curr_dir
+
+    awk '{print $1 " " $1}' ${exp_dir}/editing_${test_dir}${flag}/text \
+        > ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/speaker_mapping
+fi
+
+if [ $start -le 3 ] && [ $end -ge 3 ]; then
+    echo "Step 3: Extract duration/alignment from baseline TTS model";
+
+    echo "....Make wavlist for baseline TTS inference";
+
+    python ppg_tts/evaluation/evaluate_ppg/make_audio_filelist.py \
+        ${testset}/wav.scp ${exp_dir}/editing_${test_dir}${flag}/text ${exp_dir}/editing_${test_dir}${flag}/wavlist
+
+
+    curr_dir=$(pwd)
+
+    echo "....Change directory from ${curr_dir} to ${baseline_tts_proj}";
+
+    cd ${baseline_tts_proj}
+
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_align_%A.out \
+        ${baseline_tts_proj}/sbatch_scripts/alignment.sh \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/matcha_duration \
+        ${exp_dir}/editing_${test_dir}${flag}/wavlist
+
+    echo "....Duration/Alignment extraction done, change back to ${curr_dir}"
+
+    cd ${curr_dir}
+
+    echo "....Transforming baseline TTS duration/alignment to edit_json format"
+
+    python ppg_tts/evaluation/evaluate_ppg/transform_matcha_alignment.py \
+        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
+        --matcha_alignment_folder ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/matcha_duration \
+        --output_json ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
+
+fi
+
+if [ $start -le 4 ] && [ $end -ge 4 ]; then
+    echo "Step 4: Extract PPG from synthesized speech"
+
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}";
+
+    ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
+        --text_file ${exp_dir}/editing_${test_dir}${flag}/text
+
+    echo "....Extracting PPG from ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}";
+    
+    ./ppg_tts/evaluation/evaluate_ppg/extract_kaldi_ppg.sh \
+        --wav_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway} \
+        --text_file ${exp_dir}/editing_${test_dir}${flag}/text
+fi
+
+if [ $start -le 5 ] && [ $end -ge 5 ]; then
+    echo "Step 5: Evaluating PPG between our model and baseline TTS";
+
+    echo "Evaluating PPG from model synthesized speech";
+    python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
+        --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
+        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
+        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json
+
+    
+    echo "\nEvaluating PPG from TTS-baseline synthesized speech";
+    python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
+        --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
+        --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
+        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
+        --matcha_aligned_edits ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
+fi
+
+echo "Step $start to step $end is done";

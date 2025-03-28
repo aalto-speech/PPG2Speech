@@ -20,7 +20,7 @@ def read_wav_scp(scp: str):
 def read_wav(wav_dir: str):
     wavs = os.listdir(wav_dir)
 
-    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e" in wav]
+    wavs = [os.path.join(wav_dir, wav) for wav in wavs if "generated_e2e.wav" in wav]
 
     for wav in wavs:
         key = wav.split('/')[-1].replace('_generated_e2e.wav', '')
@@ -34,24 +34,15 @@ if __name__ == "__main__":
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-    # ut_model = utmosv2.create_model(
-    #     pretrained=True,
-    #     fold=3,
-    # )
-
-    # mos = ut_model.predict(
-    #     input_dir=args.flip_wav_dir,
-    #     num_repetitions=5,
-    #     device=device,
-    # )
-
-    # logger.info(f"UTMOS score is {mos}")
+    logger.add(
+        f"{args.flip_wav_dir}/logs/mos.log",
+        rotation='200 MB'
+    )
 
     average_score = torch.zeros((4,), device='cpu')
-    num_audio = 0
 
     # for wav, sr, key in read_wav_scp('/scratch/work/liz32/ppg_tts/data/spk_sanity/wav.scp'):
-    for wav, sr, key in read_wav(args.flip_wav_dir):
+    for i, (wav, sr, key) in enumerate(read_wav(args.flip_wav_dir)):
         score = deep_noise_suppression_mean_opinion_score(
             preds=wav.to('cpu'),
             fs=sr,
@@ -63,11 +54,8 @@ if __name__ == "__main__":
         logger.info(
             f'{key}: p808_mos {score[0][0]}, mos_sig {score[0][1]}, '
             f'mos_bak {score[0][2]}, mos_ovr {score[0][3]}')
-        average_score += score.squeeze()
-        num_audio += 1
+        average_score += (score.squeeze() - average_score) / (i + 1)
     
-    average_score /= num_audio
-
     logger.info(f'The average scores: p808_mos {average_score[0]}, '
                 f'mos_sig {average_score[1]}, mos_bak {average_score[2]}, '
                 f'mos_ovr {average_score[3]}')

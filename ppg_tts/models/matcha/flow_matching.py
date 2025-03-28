@@ -126,3 +126,118 @@ class CFM(BASECFM):
         in_channels = in_channels * 2 + (spk_emb_dim if n_spks > 1 else 0)
         # Just change the architecture of the estimator here
         self.estimator = Decoder(in_channels=in_channels, out_channels=out_channel, **decoder_params)
+
+
+class CFM_CFG(CFM):
+    def __init__(self,
+                 in_channels,
+                 out_channel,
+                 cfm_params,
+                 decoder_params,
+                 n_spks=1,
+                 spk_emb_dim=64,
+                 cfg_prob=0.2,
+                 guidance_scale=1,
+                 sway_coeff: float=-1,
+                 drop_ppg: bool=False):
+        super().__init__(in_channels, out_channel, cfm_params, decoder_params, n_spks, spk_emb_dim)
+
+        self.cfg_prob = cfg_prob
+
+        self.guidance_scale = guidance_scale
+
+        if not (-1 <= sway_coeff <= (torch.pi / 2 - 1)):
+            raise ValueError(f"s must be in [-1, pi/2 - 1], got {sway_coeff}")
+        
+        self.sway_coeff = sway_coeff
+
+        self.drop_ppg = drop_ppg
+
+    def sway_sampling(self, u: torch.Tensor) -> torch.Tensor:
+        term = torch.cos(torch.pi / 2 * u) - 1 + u
+        return u + self.sway_coeff * term
+
+    def solve_euler(self, x, t_span, mu, mask, spks, cond):
+        """
+        Fixed euler solver for ODEs.
+        Args:
+            x (torch.Tensor): random noise
+            t_span (torch.Tensor): n_timesteps interpolated
+                shape: (n_timesteps + 1,)
+            mu (torch.Tensor): output of encoder
+                shape: (batch_size, n_feats, mel_timesteps)
+            mask (torch.Tensor): output_mask
+                shape: (batch_size, 1, mel_timesteps)
+            spks (torch.Tensor, optional): speaker ids. Defaults to None.
+                shape: (batch_size, spk_emb_dim)
+            cond: Not used but kept for future purposes
+        """
+        t_span = self.sway_sampling(t_span)
+        t, _, dt = t_span[0], t_span[-1], t_span[1] - t_span[0]
+
+        # I am storing this because I can later plot it by putting a debugger here and saving it to a file
+        # Or in future might add like a return_all_steps flag
+        sol = []
+
+        for step in range(1, t_span.shape[0]):
+            eps_cond = self.estimator(x, mask, mu, t, spks, cond)
+            # Compute unconditional prediction by replacing spks with zeros
+            null_spks = torch.zeros_like(spks)
+            if self.drop_ppg:
+                null_mu = torch.zeros_like(mu)
+                eps_uncond = self.estimator(x, mask, null_mu, t, null_spks, cond)
+            else:
+                eps_uncond = self.estimator(x, mask, mu, t, null_spks, cond)
+            dphi_dt = eps_uncond + self.guidance_scale * (eps_cond - eps_uncond)
+
+            x = x + dt * dphi_dt
+            t = t + dt
+            sol.append(x)
+            if step < t_span.shape[0] - 1:
+                dt = t_span[step + 1] - t
+
+        return sol[-1]
+    
+    def compute_loss(self, x1, mask, mu, spks=None, cond=None):
+        """Computes diffusion loss with classifier-free guidance training.
+        
+        Args:
+            x1 (torch.Tensor): Target, shape (batch_size, n_feats, mel_timesteps)
+            mask (torch.Tensor): Target mask, shape (batch_size, 1, mel_timesteps)
+            mu (torch.Tensor): Output of encoder (text latent representations), shape (batch_size, n_feats, mel_timesteps)
+            spks (torch.Tensor, optional): Condition (concat of speaker, pitch, voiced flag), 
+                shape (batch_size, spk_emb_dim + pitch_emb_dim + 1, mel_timesteps). Defaults to None.
+        
+        Returns:
+            loss: conditional flow matching loss
+            y: conditional flow, shape (batch_size, n_feats, mel_timesteps)
+        """
+        b, _, t = mu.shape
+
+        # Apply classifier-free guidance dropout on the condition.
+        # With probability cfg_prob, drop (zero out) the condition for the entire example.
+        if spks is not None and hasattr(self, "cfg_prob") and self.cfg_prob > 0:
+            # Create a dropout mask per sample
+            drop_mask = (torch.rand(b, device=mu.device) < self.cfg_prob).float()  # shape (b,)
+            # Reshape to broadcast to spks shape
+            drop_mask = drop_mask.view(b, 1, 1)
+            # Replace spks with zero for those examples
+            spks = spks * (1 - drop_mask)
+
+            if self.drop_ppg:
+                mu = mu * (1 - drop_mask)
+
+        # Random timestep
+        t_rand = torch.rand([b, 1, 1], device=mu.device, dtype=mu.dtype)
+        # Sample noise p(x_0)
+        z = torch.randn_like(x1)
+
+        # Form the target (y) as a convex combination of noise and the target x1.
+        y = (1 - (1 - self.sigma_min) * t_rand) * z + t_rand * x1
+        # Compute the "flow" target u (a residual between x1 and a scaled noise term)
+        u = x1 - (1 - self.sigma_min) * z
+
+        # Get the estimator prediction with the (possibly dropped) condition.
+        pred = self.estimator(y, mask, mu, t_rand.squeeze(), spks)
+        loss = F.mse_loss(pred, u, reduction="sum") / (torch.sum(mask) * u.shape[1])
+        return loss, y

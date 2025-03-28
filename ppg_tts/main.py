@@ -2,7 +2,6 @@ import torch
 from lightning.pytorch.cli import LightningCLI
 from lightning.pytorch import seed_everything
 from .tts.DataModule import PersoDataModule, BasicDataModule, LibriTTSRDataModule
-from .tts.LightningModule import ConformerTTSModel, ConformerWavenetTTSModel
 
 def cli_main():
     seed_everything(17, workers=True)
