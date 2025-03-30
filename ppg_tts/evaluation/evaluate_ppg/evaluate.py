@@ -97,8 +97,9 @@ if __name__ == '__main__':
 
             with open(alignment_json_path, 'r') as reader:
                 alignment_data = json.load(reader)['tiers']
-            entry_idx = edit_details[key]['pos_in_str'] \
-                - edit_details[key]['new_text'].count(" ")
+
+            prefix = edit_details[key]['new_text'][:edit_details[key]['pos_in_str']]
+            entry_idx = edit_details[key]['pos_in_str'] - prefix.count(" ")
             entry = alignment_data['phones']['entries'][entry_idx]
 
             start_frame, end_frame = int(entry[0] * 100), int(entry[1] * 100)
