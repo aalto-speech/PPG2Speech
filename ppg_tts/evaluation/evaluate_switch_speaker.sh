@@ -40,7 +40,7 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
         cd vocoder/bigvgan
         python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
             --input_mels_dir "${exp_dir}/flip_generate_mel_${test_dir}_gd${guidance}_sw${sway}" \
-            --output_dir "${exp_dir[$SLURM_ARRAY_TASK_ID]}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
+            --output_dir "${exp_dir}/flip_generate_wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
 
         cd $curr_dir
     else
