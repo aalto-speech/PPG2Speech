@@ -105,6 +105,13 @@ if [ $start -le 3 ] && [ $end -ge 3 ]; then
     python ppg_tts/evaluation/evaluate_ppg/build_mfa_dictionary.py \
         ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
         ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary;
+
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab.tmp;
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab;
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab.tmp \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab;
     
     echo "Extract alignment using MFA";
     sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/mfa_basetts_%A.out \
