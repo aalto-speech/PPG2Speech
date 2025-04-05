@@ -108,8 +108,8 @@ if [ $start -le 3 ] && [ $end -ge 3 ]; then
 
     mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab \
         ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab.tmp;
-    mv ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab;
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab;
     mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab.tmp \
         ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab;
     
