@@ -34,7 +34,7 @@ if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Step 0: Generating mels with edited PPGs"
 
     python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
-        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg ${rule_based} \
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg \
         --guidance ${guidance} --sway_coeff ${sway}
 fi
 
@@ -88,22 +88,38 @@ if [ $start -le 3 ] && [ $end -ge 3 ]; then
     echo "Step 3: Extract alignment from baseline TTS using MFA";
 
     echo "....Make corpus and dictionary for MFA";
-    python ppg_tts/evaluation/evaluate_ppg/build_mfa_corpus.py \
-        --text_file ${exp_dir}/editing_${test_dir}${flag}/text \
-        --audio_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
-        --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+    # python ppg_tts/evaluation/evaluate_ppg/build_mfa_corpus.py \
+    #     --text_file ${exp_dir}/editing_${test_dir}${flag}/text \
+    #     --audio_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
+    #     --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
 
-    python ppg_tts/evaluation/evaluate_ppg/build_mfa_dictionary.py \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary;
+    # python ppg_tts/evaluation/evaluate_ppg/build_mfa_dictionary.py \
+    #     ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+    #     ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary;
+
+    # python ppg_tts/evaluation/evaluate_ppg/build_mfa_corpus.py \
+    #     --text_file ${exp_dir}/editing_${test_dir}${flag}/text \
+    #     --audio_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway} \
+    #     --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+
+    # python ppg_tts/evaluation/evaluate_ppg/build_mfa_dictionary.py \
+    #     ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+    #     ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary;
     
     echo "Extract alignment using MFA";
-    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/mfa_%A.out \
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/mfa_basetts_%A.out \
         ppg_tts/evaluation/evaluate_ppg/mfa_align.sh \
         ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
         ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary \
         /scratch/elec/t412-speechsynth/DATA/fin-mix/mfa_model/perso.zip \
         ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_align;
+
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/mfa_ppg2speech_%A.out \
+        ppg_tts/evaluation/evaluate_ppg/mfa_align.sh \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary \
+        /scratch/elec/t412-speechsynth/DATA/fin-mix/mfa_model/perso.zip \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_align;
 fi
 
 if [ $start -le 4 ] && [ $end -ge 4 ]; then
@@ -129,10 +145,11 @@ if [ $start -le 5 ] && [ $end -ge 5 ]; then
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
-        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json
+        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
+        --matcha_mfa_align ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_align
 
-    
-    echo "\nEvaluating PPG from TTS-baseline synthesized speech";
+    echo " ";
+    echo "Evaluating PPG from TTS-baseline synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \

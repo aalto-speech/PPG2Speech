@@ -7,12 +7,13 @@
 #SBATCH --gpus=1
 #SBATCH --job-name="mfa_align"
 
+module load mamba kaldi-strawberry sox
+source activate mfa
+
 corpus=$1
 dictionary=$2
 mfa_model=$3
 output_dir=$4
-
-source activate mfa
 
 mfa align --output_format json -d -j 8 -v --use_mp --clean --final_clean --overwrite \
     ${corpus} ${dictionary} ${mfa_model} ${output_dir}

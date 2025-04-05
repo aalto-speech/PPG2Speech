@@ -98,11 +98,21 @@ if __name__ == '__main__':
             with open(alignment_json_path, 'r') as reader:
                 alignment_data = json.load(reader)['tiers']
 
-            prefix = edit_details[key]['new_text'][:edit_details[key]['pos_in_str']]
-            entry_idx = edit_details[key]['pos_in_str'] - prefix.count(" ")
-            entry = alignment_data['phones']['entries'][entry_idx]
+            if isinstance(edit_details[key]['pos_in_str'], list):
+                prefix_until = edit_details[key]['pos_in_str'][0]
+            else:
+                prefix_until = edit_details[key]['pos_in_str']
 
-            start_frame, end_frame = int(entry[0] * 100), int(entry[1] * 100)
+            prefix = edit_details[key]['new_text'][:prefix_until]
+            entry_idx = prefix_until - prefix.count(" ")
+
+            if isinstance(edit_details[key]['pos_in_str'], list):
+                entry = alignment_data['phones']['entries'][entry_idx]
+                second_entry = alignment_data['phones']['entries'][entry_idx + 1]
+                start_frame, end_frame = int(entry[0] * 100), int(second_entry[1] * 100)
+            else:
+                entry = alignment_data['phones']['entries'][entry_idx]
+                start_frame, end_frame = int(entry[0] * 100), int(entry[1] * 100)
             synthesized_editing = synthesize_ppg[start_frame:end_frame]
             num_frames = (edited_region[1] - edited_region[0])
         else:
@@ -117,9 +127,9 @@ if __name__ == '__main__':
             num_invalid += 1
             continue
         else:
-            logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd}")
+            logger.info(f"{key}, frame-level jensen-shannon divergence: {jsd / num_frames}")
         average_jsd += ((jsd / num_frames) - average_jsd) / (i - num_invalid + 1)
 
     logger.info(
-        f"Inference done. Average frame-level jensen-shannon divergence: {average_jsd / num_frames}"
+        f"Inference done. Average frame-level jensen-shannon divergence: {average_jsd}"
     )

@@ -75,12 +75,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        '--rule_based_edit',
-        action='store_true',
-        default=False,
-    )
-
-    parser.add_argument(
         '--guidance_scale',
         type=float,
         default=1.0,
@@ -116,7 +110,7 @@ if __name__ == "__main__":
     if args.switch_speaker:
         mel_save_dir = exp_dir / f"flip_generate_mel_{dirname}_gd{args.guidance_scale}_sw{args.sway_coeff}"
     elif args.edit_ppg:
-        flag = '_rule_based' if args.rule_based_edit else ''
+        flag = '_rule_based'
         mel_save_dir = exp_dir / f"editing_{dirname}{flag}/mel_gd{args.guidance_scale}_sw{args.sway_coeff}"
     else:
         mel_save_dir = exp_dir / f"mel_{dirname}_gd{args.guidance_scale}_sw{args.sway_coeff}"
@@ -175,7 +169,6 @@ if __name__ == "__main__":
                 text = testset[i]['text']
                 new_ppg, (new_text, pos_in_str), region = editor.edit_ppg(
                     testdata['ppg'].squeeze(0).numpy(), text=text,
-                    is_rule_based=args.rule_based_edit,
                 )
 
                 ppg_writer(source_key, new_ppg)
