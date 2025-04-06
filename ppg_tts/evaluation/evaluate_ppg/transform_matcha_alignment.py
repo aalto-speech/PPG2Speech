@@ -43,15 +43,25 @@ if __name__ == '__main__':
 
         edit_idx = edit_info[key]['pos_in_str']
 
-        align_info_at_pos = matcha_align[edit_idx]
+        if isinstance(edit_idx, list):
+            idx1, idx2 = edit_idx
+            align_info_at_pos_1 = matcha_align[idx1]
+            align_info_at_pos_2 = matcha_align[idx2]
 
-        # print(f"{key}: {align_info_at_pos}")
+            c1 = list(align_info_at_pos_1.keys())[0]
+            c2 = list(align_info_at_pos_2.keys())[0]
+            starttime = align_info_at_pos_1[c1]['starttime'] * 1.161
+            endtime = align_info_at_pos_1[c2]['endtime'] * 1.161
+        else:
+            align_info_at_pos = matcha_align[edit_idx]
+            c = list(align_info_at_pos.keys())[0]
 
-        c = list(align_info_at_pos.keys())[0]
+            starttime = align_info_at_pos[c]['starttime'] * 1.161
+            endtime = align_info_at_pos[c]['endtime'] * 1.161
 
         edit_info[key]["edit_region"] = (
-            math.floor(align_info_at_pos[c]['starttime'] * 1.161), #! 22050HZ with 256 hopsize to kaldi 10ms mel frame
-            math.floor(align_info_at_pos[c]['endtime'] * 1.161)
+            math.floor(starttime), #! 22050HZ with 256 hopsize to kaldi 10ms mel frame
+            math.floor(endtime)
         )
 
         matcha_edits_json[key] = edit_info[key]

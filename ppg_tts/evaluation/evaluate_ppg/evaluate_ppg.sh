@@ -34,7 +34,7 @@ if [ $start -le 0 ] && [ $end -ge 0 ]; then
     echo "Step 0: Generating mels with edited PPGs"
 
     python -m ppg_tts.evaluation.synthesis --model_class ${model_class} \
-        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg ${rule_based} \
+        --ckpt ${ckpt} --device ${device} --data_dir ${testset} --edit_ppg \
         --guidance ${guidance} --sway_coeff ${sway}
 fi
 
@@ -142,8 +142,8 @@ if [ $start -le 5 ] && [ $end -ge 5 ]; then
         --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
         --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json
 
-    
-    echo "\nEvaluating PPG from TTS-baseline synthesized speech";
+    echo " "
+    echo "Evaluating PPG from TTS-baseline synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
