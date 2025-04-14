@@ -5,9 +5,9 @@ def build_parser() -> argparse.ArgumentParser:
                                       TTS training will use Pytorch-lightning CLI.")
     parser.add_argument("--dataset",
                         help="The dataset used")
-    parser.add_argument("--data_dir", 
-                        help="The data directory for Dataset. Should contains wav.scp and text for Perso. Download location for VCTK.",
-                        default="./data")
+    parser.add_argument("--data_dir",
+                        type=str,
+                        help="The data directory for Dataset.")
     parser.add_argument("--auth_token",
                         help="The authorisation token for using Pyannote Embedding model.")
     parser.add_argument("--asr_pretrained", 
@@ -25,6 +25,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="ckpt path for the TTS/VC model.")
     parser.add_argument("--flip_wav_dir",
                         help="the wav directory for flipped generation")
+    parser.add_argument(
+        "--text",
+        type=str,
+        help='text transcripts for wavs in --flip_wav_dir',
+    )
     parser.add_argument('--debug',
                         help='whether or not using debug mode.',
                         action="store_true")

@@ -95,7 +95,14 @@ if __name__ == "__main__":
         rotation='200 MB'
     )
 
-    logger.info(f"Evaluating WER on {args.flip_wav_dir}, transcripts in {args.data_dir}/text.")
+    if args.data_dir is None and args.text is None:
+        raise ValueError("Much provide either data_dir that contains text or a separate text transcription")
+    elif args.data_dir:
+        text_file = f"{args.data_dir}/text"
+    else:
+        text_file = args.text
+
+    logger.info(f"Evaluating WER on {args.flip_wav_dir}, transcripts in {text_file}.")
 
     ref = []
     pred = []
@@ -103,7 +110,7 @@ if __name__ == "__main__":
     with torch.inference_mode():
         # for utterance in read_wav_scp_text('/scratch/work/liz32/ppg_tts/data/spk_sanity/wav.scp',
         #                                    '/scratch/work/liz32/ppg_tts/data/spk_sanity/text'):
-        for utterance in read_wav_text(args.flip_wav_dir, f"{args.data_dir}/text"):
+        for utterance in read_wav_text(args.flip_wav_dir, text_file):
             wav = utterance[0].to(device)
             text = utterance[1]
             ref.append(text)
