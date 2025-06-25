@@ -21,7 +21,7 @@ conda env create -f environment.yaml
 
 Pretrained checkpoint is available [here](https://drive.google.com/file/d/1HKPi04xN3a07fv_KzhdK-MlkRKyVyFmZ/view?usp=sharing).
 
-Pretrained HiFi-GAN generator checkpoint is avaible [here](). Please put the HiFi-GAN checkpoint under `vocoder/hifigan/ckpt`.
+Pretrained HiFi-GAN generator checkpoint is avaible [here](https://drive.google.com/file/d/1uP6iv9dFvKdlCBPZC5VwxYjg8eNR6Da8/view?usp=sharing). Please put the HiFi-GAN checkpoint under `vocoder/hifigan/ckpt`.
 
 ## Training
 
