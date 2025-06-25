@@ -34,21 +34,10 @@ fi
 if [ $start -le 1 ] && [ $end -ge 1 ]; then
     echo "Generating wavs for generated mels"
 
-    if [[ $vocoder == "bigvgan" ]]; then
+    python -m vocoder.hifigan.inference_e2e --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
+        --input_mels_dir "${exp_dir}/mel_${test_dir}_gd${guidance}_sw${sway}" \
+        --output_dir "${exp_dir}/wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
 
-        curr_dir=$(pwd)
-
-        cd vocoder/bigvgan
-        python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
-            --input_mels_dir "${exp_dir}/mel_${test_dir}_gd${guidance}_sw${sway}" \
-            --output_dir "${exp_dir}/wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
-
-        cd $curr_dir
-    else
-        python -m vocoder.hifigan.inference_e2e --checkpoint_file vocoder/hifigan/ckpt/g_02500000 \
-            --input_mels_dir "${exp_dir}/mel_${test_dir}_gd${guidance}_sw${sway}" \
-            --output_dir "${exp_dir}/wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}"
-    fi
     cp "${exp_dir}/mel_${test_dir}_gd${guidance}_sw${sway}/speaker_mapping" \
         "${exp_dir}/wav_${test_dir}_${vocoder}_gd${guidance}_sw${sway}/speaker_mapping"
 fi

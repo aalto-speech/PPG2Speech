@@ -4,8 +4,9 @@ sbatch_scripts/
 sbatch_logs/
 logs/
 exp*/
-vocoder/hifigan/ckpt/
 inspect_vocoder/
+vocoder/hifigan/ckpt/do_02500000
+vocoder/hifigan/ckpt/g_02500000
 *.png
 ppg_tts/interpretate/*.json
 ppg_tts/interpretate/*.txt
