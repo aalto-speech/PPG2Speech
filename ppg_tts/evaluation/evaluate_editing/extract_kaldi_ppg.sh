@@ -5,16 +5,16 @@ text_file=
 
 stage=1
 stop_stage=100
-graph_dir=exp/parl2015-2020-train/chain/tdnn_d/graph_test_parl_20M_varikn.bpe19000.d0.0001
+graph_dir=
 model_dir=$(dirname $graph_dir)
-transition_id_cnt=exp/parl2015-2020-train/chain/tdnn_d/decode_parl2015-2020-train_hires_parl_20M_varikn.bpe19000.d0.0001/1.tacc
+transition_id_cnt=
 nj=4
 
 # Get the directory where the script was called from
 current_dir=$(pwd)
 
 # Set Kaldi root
-export KALDI_ROOT=/scratch/elec/t405-puhe/p/fin-parl-models/kaldi_2015-2020-kevat
+export KALDI_ROOT="/Specify/Your/Kaldi/Root/Here"
 KALDI_S5=$KALDI_ROOT/s5
 
 # Parse command-line options

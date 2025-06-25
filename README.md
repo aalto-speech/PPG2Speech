@@ -1,53 +1,32 @@
-# PPG-based Speech Synthesis and Editing for Finnish
+# Pronunciation Editing for Finnish Speech using Phonetic Posteriorgrams
 
 ## Data
-Kaldi-style dataset
-1. wav.scp
-2. ppg.scp & ppg.ark
-3. embedding.scp & embedding.ark
-4. log_f0.scp & log_f0.ark (From PENN)
-5. voiced.scp & voiced.ark (Periodicity from PENN).
-6. Optionally text
 
-## Inference
+1. Prepare the data in a Kaldi's `wav.scp` format.
+2. Use a pre-trained Kaldi HMM-DNN model to extract PPGs from speech. [Kaldi docs](https://kaldi-asr.org/) are helpful to do that.
+3. Extract Speaker Embedding using [Wespeaker](https://github.com/wenet-e2e/wespeaker) cli.
+4. Extract Pitch and Periodicity using `ppg_tts/feature_extract/penn_log_f0_extract.py`.
+
+## Training
+
+```python
+python -m ppg_tts.main fit -c config/fit_ppgmatcha.yaml -c config/data_template.yaml
+```
+
+You can overwrite the arguments via CLI, see [pytorch-lightning docs](https://lightning.ai/docs/pytorch/stable/cli/lightning_cli_advanced.html).
 
 ## Evaluation
 
-### Copy-synthesis Evaluation
+### Copy-synthesis/reconstruct-synthesis Evaluation
+
 See `ppg_tts/evaluation/evaluate_copy_synthesis.sh`
 
 ### Cross-speaker Evaluation
+
 See `ppg_tts/evaluation/evaluate_switch_speaker.sh`
 
-### PPG Evaluation for Synthesized Speech (WIP)
+### Editing
 
-#### 1. Synthesize with 1 character's prob switch to another character
-First, use alignment to select editing region:
-- [x] Use dtw to find alignment between ppg and text
-- [x] random select a character in the string, move its probability in the alignment section to another randomly select character (eg. cat -> bat)
-- [x] Return edited text and PPG
-
-#### 2. Synthesize edited text with Matcha-TTS baseline
-- [x] Move the ONNX inference code here and use ONNX runtime
-
-#### 3. Synthesize edited PPG with the model
-- [x] Add editing ppg option and editor to `ppg_tts/evaluation/synthesis.py`
-
-#### 4. Evaluate Kaldi PPG/pdf-post
-
-Extract PPG/pdf-post for TTS speech and PPG-synthesized speech.
-
-Extract Alignment from TTS baseline.
-
-Evaluate DTW cost using [Jennsen-Shannon Divergence](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.jensenshannon.html) and [Wasserstein distance](https://docs.scipy.org/doc/scipy-1.15.2/reference/generated/scipy.stats.wasserstein_distance_nd.html) in the editied region (using DTW to deal with frame alignment issue).
-
-
-## Training
-1. Prepare data as the [Data]() section
-2. Modify `config/data_template.yaml` and `config/fit_ppgmatcha.yaml` accordingly, or prepare your own config file.
-3. Run the following code:
-```
-python -m ppg_tts.main -c config/data_template.yaml -c config/fit_ppgmatcha.yaml
-```
+See `ppg_tts/evaluation/evaluate_editing/evaluate_editing.sh`
 
 ## Reference

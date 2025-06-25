@@ -21,6 +21,8 @@ end="${11:-5}"
 exp_dir=$(realpath $(dirname "$(dirname "$ckpt")"))
 test_dir=$(basename ${testset})
 
+MFA_MODEL_PATH="/YOUR/MFA/MODEL/PATH" #! Please put your own MFA model path here
+
 if [ "$rule_based" = "--rule_based_edit" ]; then
     flag="_rule_based"
 else
@@ -48,7 +50,7 @@ if [ $start -le 1 ] && [ $end -ge 1 ]; then
         cd vocoder/bigvgan
         python inference_e2e.py --checkpoint_file bigvgan_generator.pt \
             --input_mels_dir ${exp_dir}/editing_${test_dir}${flag}/mel_gd${guidance}_sw${sway} \
-            --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}
+            --output_dir ${exp_dir[$SLURM_ARRAY_TASK_ID]}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}
 
         cd $curr_dir
     else
@@ -85,36 +87,48 @@ if [ $start -le 2 ] && [ $end -ge 2 ]; then
 fi
 
 if [ $start -le 3 ] && [ $end -ge 3 ]; then
-    echo "Step 3: Extract duration/alignment from baseline TTS model";
+    echo "Step 3: Extract alignment from baseline TTS using MFA";
 
-    echo "....Make wavlist for baseline TTS inference";
+    echo "....Make corpus and dictionary for MFA";
+    python ppg_tts/evaluation/evaluate_ppg/build_mfa_corpus.py \
+        --text_file ${exp_dir}/editing_${test_dir}${flag}/text \
+        --audio_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway} \
+        --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
 
-    python ppg_tts/evaluation/evaluate_ppg/make_audio_filelist.py \
-        ${testset}/wav.scp ${exp_dir}/editing_${test_dir}${flag}/text ${exp_dir}/editing_${test_dir}${flag}/wavlist
+    python ppg_tts/evaluation/evaluate_ppg/build_mfa_dictionary.py \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary;
 
+    python ppg_tts/evaluation/evaluate_ppg/build_mfa_corpus.py \
+        --text_file ${exp_dir}/editing_${test_dir}${flag}/text \
+        --audio_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway} \
+        --output_dir ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
 
-    curr_dir=$(pwd)
+    python ppg_tts/evaluation/evaluate_ppg/build_mfa_dictionary.py \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary;
 
-    echo "....Change directory from ${curr_dir} to ${baseline_tts_proj}";
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab.tmp;
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab;
+    mv ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0001.lab.tmp \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/03m/03m_test_0002.lab;
+    
+    echo "Extract alignment using MFA";
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/mfa_basetts_%A.out \
+        ppg_tts/evaluation/evaluate_ppg/mfa_align.sh \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary \
+        ${MFA_MODEL_PATH} \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_align;
 
-    cd ${baseline_tts_proj}
-
-    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/baseline_tts_align_%A.out \
-        ${baseline_tts_proj}/sbatch_scripts/alignment.sh \
-        ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/matcha_duration \
-        ${exp_dir}/editing_${test_dir}${flag}/wavlist
-
-    echo "....Duration/Alignment extraction done, change back to ${curr_dir}"
-
-    cd ${curr_dir}
-
-    echo "....Transforming baseline TTS duration/alignment to edit_json format"
-
-    python ppg_tts/evaluation/evaluate_ppg/transform_matcha_alignment.py \
-        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
-        --matcha_alignment_folder ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/matcha_duration \
-        --output_json ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
-
+    sbatch --wait --output=${exp_dir}/editing_${test_dir}${flag}/mfa_ppg2speech_%A.out \
+        ppg_tts/evaluation/evaluate_ppg/mfa_align.sh \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_corpus/dictionary \
+        ${MFA_MODEL_PATH} \
+        ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_align;
 fi
 
 if [ $start -le 4 ] && [ $end -ge 4 ]; then
@@ -140,15 +154,16 @@ if [ $start -le 5 ] && [ $end -ge 5 ]; then
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
-        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json
+        --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
+        --matcha_mfa_align ${exp_dir}/editing_${test_dir}${flag}/wav_${vocoder}_gd${guidance}_sw${sway}/mfa_align
 
-    echo " "
+    echo " ";
     echo "Evaluating PPG from TTS-baseline synthesized speech";
     python -m ppg_tts.evaluation.evaluate_ppg.evaluate \
         --edited_ppg ${exp_dir}/editing_${test_dir}${flag}/ppg.scp \
         --synthesized_ppg ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/kaldi_dataset/ppg.scp \
         --edit_json ${exp_dir}/editing_${test_dir}${flag}/edits.json \
-        --matcha_aligned_edits ${exp_dir}/editing_${test_dir}${flag}/matcha_edits.json
+        --matcha_mfa_align ${exp_dir}/editing_${test_dir}${flag}/wav_baseline_${vocoder}_gd${guidance}_sw${sway}/mfa_align
 fi
 
 echo "Step $start to step $end is done";

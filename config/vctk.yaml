@@ -1,6 +1,0 @@
-data:
-  class_path: ppg_tts.tts.DataModule.BasicDataModule
-  init_args:
-    data_dir: /scratch/elec/t412-speechsynth/DATA/vctk_split/vctk_split
-    batch_size: 16
-    no_ctc: true

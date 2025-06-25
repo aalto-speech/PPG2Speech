@@ -10,7 +10,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from typing import Tuple
 from ..dataset import ExtendDataset, PersoCollateFn
-from .evaluate_ppg.ppg_edit import PPGEditor
+from .evaluate_editing.ppg_edit import PPGEditor
 from ..utils import load_model, import_obj_from_string
 
 def seed_everything(seed: int=17) -> None:
