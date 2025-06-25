@@ -1,5 +1,7 @@
 # Pronunciation Editing for Finnish Speech using Phonetic Posteriorgrams
 
+This is the official repo for our paper *Pronunciation Editing for Finnish Speech using Phonetic Posteriorgrams* in Speech Synthesis Workshop 2025 (SSW13) at Leeuwarden, the Netherlands.
+
 ## Setup your environment
 
 Create a conda environment via:
@@ -27,14 +29,20 @@ You can overwrite the arguments via CLI, see [pytorch-lightning docs](https://li
 
 ### Copy-synthesis/reconstruct-synthesis Evaluation
 
-See `ppg_tts/evaluation/evaluate_copy_synthesis.sh`
+See [ppg_tts/evaluation/evaluate_copy_synthesis.sh](https://github.com/aalto-speech/PPG2Speech/blob/main/ppg_tts/evaluation/evaluate_copy_synthesis.sh)
 
 ### Cross-speaker Evaluation
 
-See `ppg_tts/evaluation/evaluate_switch_speaker.sh`
+See [ppg_tts/evaluation/evaluate_switch_speaker.sh](https://github.com/aalto-speech/PPG2Speech/blob/main/ppg_tts/evaluation/evaluate_switch_speaker.sh)
 
 ### Editing
 
-See `ppg_tts/evaluation/evaluate_editing/evaluate_editing.sh`
+See [ppg_tts/evaluation/evaluate_editing/evaluate_editing.sh](https://github.com/aalto-speech/PPG2Speech/blob/main/ppg_tts/evaluation/evaluate_editing/evaluate_editing.sh)
 
-## Reference
+## Citation
+
+Coming soon.
+
+## License
+
+Our work is shared under [Creative Commons Attribution 4.0 International (CC-BY-4.0)](https://creativecommons.org/licenses/by/4.0/)
