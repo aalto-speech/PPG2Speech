@@ -1,4 +1,4 @@
-name: tts_env
+name: ppg2speech
 channels:
   - pytorch
   - nvidia
@@ -354,4 +354,3 @@ dependencies:
       - xyzservices==2024.9.0
       - yamllint==1.35.1
       - yapecs==0.0.8
-prefix: /scratch/work/liz32/.conda_envs/tts_env

@@ -1,10 +1,18 @@
 # Pronunciation Editing for Finnish Speech using Phonetic Posteriorgrams
 
+## Setup your environment
+
+Create a conda environment via:
+
+```bash
+conda env create -f environment.yaml
+```
+
 ## Data
 
 1. Prepare the data in a Kaldi's `wav.scp` format.
 2. Use a pre-trained Kaldi HMM-DNN model to extract PPGs from speech. [Kaldi docs](https://kaldi-asr.org/) are helpful to do that.
-3. Extract Speaker Embedding using [Wespeaker](https://github.com/wenet-e2e/wespeaker) cli.
+3. Extract Speaker Embedding using [Wespeaker](https://github.com/wenet-e2e/wespeaker) cli. Specifically, you should use ```wespeaker --task embedding_kaldi --wav_scp YOUR_WAV.scp --output_file /path/to/embedding```, see [here](https://wenet.org.cn/wespeaker/python_package.html#command-line-usage).
 4. Extract Pitch and Periodicity using `ppg_tts/feature_extract/penn_log_f0_extract.py`.
 
 ## Training
